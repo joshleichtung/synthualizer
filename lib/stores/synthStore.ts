@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SubtractiveEngine } from '@/lib/audio/engines/SubtractiveEngine';
+import { FMEngine } from '@/lib/audio/engines/FMEngine';
 
 /**
  * Interaction tracking state
@@ -14,15 +15,24 @@ interface InteractionState {
  * Synth state interface
  */
 interface SynthState {
-  // Engine instance
-  engine: SubtractiveEngine | null;
+  // Engine selection and instance
+  engineType: 'subtractive' | 'fm';
+  engine: SubtractiveEngine | FMEngine | null;
 
-  // Current parameters
+  // Common parameters (both engines)
+  waveform: OscillatorType;
+  octave: number;
+
+  // Subtractive-specific parameters
   cutoff: number;
   resonance: number;
-  waveform: OscillatorType;
   filterType: BiquadFilterType;
-  octave: number;
+
+  // FM-specific parameters
+  modulationIndex: number;
+  frequencyRatio: number;
+  modulatorWaveform: OscillatorType;
+  carrierWaveform: OscillatorType;
 
   // Audio state
   isPlaying: boolean;
@@ -34,13 +44,24 @@ interface SynthState {
 
   // Actions
   initializeEngine: () => void;
+  setEngineType: (type: 'subtractive' | 'fm') => void;
   triggerNote: (frequency: number, velocity?: number) => void;
   releaseNote: () => void;
   toggleNote: (frequency: number | null) => void;
+
+  // Subtractive actions
   updateCutoff: (value: number) => void;
   updateResonance: (value: number) => void;
-  setWaveform: (waveform: OscillatorType) => void;
   setFilterType: (filterType: BiquadFilterType) => void;
+
+  // FM actions
+  updateModulationIndex: (value: number) => void;
+  updateFrequencyRatio: (value: number) => void;
+  setModulatorWaveform: (waveform: OscillatorType) => void;
+  setCarrierWaveform: (waveform: OscillatorType) => void;
+
+  // Common actions
+  setWaveform: (waveform: OscillatorType) => void;
   setOctave: (octave: number) => void;
   setInteraction: (elementId: string, position: { x: number; y: number }) => void;
   clearInteraction: () => void;
@@ -52,15 +73,30 @@ interface SynthState {
  */
 export const useSynthStore = create<SynthState>((set, get) => ({
   // Initial state
+  engineType: 'subtractive',
   engine: null,
+
+  // Common parameters
+  waveform: 'sawtooth',
+  octave: 2, // Start at octave 2 for better waveform visibility
+
+  // Subtractive parameters
   cutoff: 1000,
   resonance: 1,
-  waveform: 'sawtooth',
   filterType: 'lowpass',
-  octave: 2, // Start at octave 2 for better waveform visibility
+
+  // FM parameters
+  modulationIndex: 2.0,
+  frequencyRatio: 1.0,
+  modulatorWaveform: 'sine',
+  carrierWaveform: 'sine',
+
+  // Audio state
   isPlaying: false,
   currentNote: null,
   activeFrequency: null,
+
+  // Interaction state
   lastInteraction: {
     elementId: null,
     position: null,
@@ -72,8 +108,36 @@ export const useSynthStore = create<SynthState>((set, get) => ({
    * Must be called before playing notes (typically in useEffect)
    */
   initializeEngine: () => {
-    const engine = new SubtractiveEngine();
+    const { engineType } = get();
+    const engine = engineType === 'fm' ? new FMEngine() : new SubtractiveEngine();
     set({ engine });
+  },
+
+  /**
+   * Switch between synthesis engine types
+   * @param type - Engine type ('subtractive' or 'fm')
+   */
+  setEngineType: (type: 'subtractive' | 'fm') => {
+    const { engine, activeFrequency } = get();
+
+    // Stop current note if playing
+    if (engine && activeFrequency !== null) {
+      engine.stop();
+    }
+
+    // Clean up old engine
+    engine?.disconnect();
+
+    // Create new engine
+    const newEngine = type === 'fm' ? new FMEngine() : new SubtractiveEngine();
+
+    set({
+      engineType: type,
+      engine: newEngine,
+      isPlaying: false,
+      currentNote: null,
+      activeFrequency: null,
+    });
   },
 
   /**
@@ -209,5 +273,53 @@ export const useSynthStore = create<SynthState>((set, get) => ({
         timestamp: Date.now(),
       },
     });
+  },
+
+  /**
+   * Update FM modulation index
+   * @param value - Modulation index (0-10)
+   */
+  updateModulationIndex: (value: number) => {
+    const { engine, engineType } = get();
+    if (engineType === 'fm' && engine) {
+      engine.updateParameter('modulationIndex', value);
+      set({ modulationIndex: value });
+    }
+  },
+
+  /**
+   * Update FM frequency ratio
+   * @param value - Frequency ratio (0.5-8.0)
+   */
+  updateFrequencyRatio: (value: number) => {
+    const { engine, engineType } = get();
+    if (engineType === 'fm' && engine) {
+      engine.updateParameter('frequencyRatio', value);
+      set({ frequencyRatio: value });
+    }
+  },
+
+  /**
+   * Set modulator waveform (FM only)
+   * @param waveform - Waveform type
+   */
+  setModulatorWaveform: (waveform: OscillatorType) => {
+    const { engine, engineType } = get();
+    if (engineType === 'fm' && engine) {
+      engine.updateParameter('modulatorWaveform', waveform);
+      set({ modulatorWaveform: waveform });
+    }
+  },
+
+  /**
+   * Set carrier waveform (FM only)
+   * @param waveform - Waveform type
+   */
+  setCarrierWaveform: (waveform: OscillatorType) => {
+    const { engine, engineType } = get();
+    if (engineType === 'fm' && engine) {
+      engine.updateParameter('carrierWaveform', waveform);
+      set({ carrierWaveform: waveform });
+    }
   },
 }));
