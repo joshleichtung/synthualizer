@@ -146,10 +146,16 @@ export const useSynthStore = create<SynthState>((set, get) => ({
    * @param velocity - Note velocity (0-1)
    */
   triggerNote: (frequency: number, velocity: number = 1) => {
-    const { engine } = get();
+    let { engine, initializeEngine } = get();
+
+    // Lazy initialize engine on first interaction
     if (!engine) {
-      console.warn('Engine not initialized. Call initializeEngine() first.');
-      return;
+      initializeEngine();
+      engine = get().engine;
+      if (!engine) {
+        console.error('Failed to initialize engine');
+        return;
+      }
     }
 
     engine.start(frequency, velocity);
@@ -212,10 +218,16 @@ export const useSynthStore = create<SynthState>((set, get) => ({
    * @param frequency - Note frequency in Hz, or null to stop
    */
   toggleNote: (frequency: number | null) => {
-    const { engine, activeFrequency } = get();
+    let { engine, activeFrequency, initializeEngine } = get();
+
+    // Lazy initialize engine on first interaction
     if (!engine) {
-      console.warn('Engine not initialized. Call initializeEngine() first.');
-      return;
+      initializeEngine();
+      engine = get().engine;
+      if (!engine) {
+        console.error('Failed to initialize engine');
+        return;
+      }
     }
 
     if (frequency === null || activeFrequency !== null) {

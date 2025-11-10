@@ -123,8 +123,8 @@ export function SimpleSlider({
           style={{
             width: `${percentage}%`,
             filter: isActive
-              ? `drop-shadow(0 0 8px ${glowColor}) brightness(1.1)`
-              : 'none',
+              ? `brightness(1.1) drop-shadow(0 0 8px ${glowColor})`
+              : 'brightness(1.0)',
           }}
           transition={{ duration: 0.1 }}
         />

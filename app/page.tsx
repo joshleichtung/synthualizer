@@ -39,10 +39,11 @@ export default function Home() {
     setModulatorWaveform,
   } = useSynthStore();
 
-  // Initialize audio engine on mount
+  // Initialize audio engine on first user interaction (lazy initialization)
+  // This avoids browser warnings about AudioContext requiring user gesture
   useEffect(() => {
-    initializeEngine();
-  }, [initializeEngine]);
+    // Engine will be initialized on first note trigger
+  }, []);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-purple-400 via-purple-300 to-purple-400 p-2 md:p-4 lg:p-8 flex flex-col">

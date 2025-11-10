@@ -77,12 +77,12 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
                 whileHover={{
                   scale: 1.05,
                   filter: isActive
-                    ? 'drop-shadow(0 0 20px rgba(255, 107, 157, 0.6)) brightness(1.05)'
-                    : 'drop-shadow(0 0 10px rgba(255, 107, 157, 0.3))',
+                    ? 'brightness(1.05) drop-shadow(0 0 20px rgba(255, 107, 157, 0.6))'
+                    : 'brightness(1.0) drop-shadow(0 0 10px rgba(255, 107, 157, 0.3))',
                 }}
                 whileTap={{
                   scale: 0.95,
-                  filter: 'drop-shadow(0 0 24px rgba(255, 107, 157, 0.7)) brightness(1.1)',
+                  filter: 'brightness(1.1) drop-shadow(0 0 24px rgba(255, 107, 157, 0.7))',
                 }}
                 whileFocus={{
                   filter: 'drop-shadow(0 0 8px rgba(255, 107, 157, 0.4))',
