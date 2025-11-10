@@ -63,12 +63,12 @@ export function WaveformView({ analyser }: WaveformViewProps) {
 
       const { width, height } = canvas.getBoundingClientRect();
 
-      // Clear completely for crisp display (no trails)
-      ctx.fillStyle = 'rgba(248, 249, 250, 1)';
+      // Clear completely for crisp display (no trails) - dark mouth interior
+      ctx.fillStyle = 'rgba(17, 24, 39, 1)'; // Dark gray (gray-900)
       ctx.fillRect(0, 0, width, height);
 
       // Draw center line
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, height / 2);
@@ -79,7 +79,7 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       const triggerPoint = findTriggerPoint(dataArray);
 
       // Add slow drift effect (increment phase offset slowly)
-      phaseOffsetRef.current += 0.5; // Adjust this value for speed (0.5 = slow, 2 = faster)
+      phaseOffsetRef.current += 1.0; // Adjust this value for speed (0.5 = slow, 2 = faster)
       const driftOffset = Math.floor(phaseOffsetRef.current);
 
       // Calculate how many samples to display (use about 2-3 cycles worth)
@@ -90,10 +90,14 @@ export function WaveformView({ analyser }: WaveformViewProps) {
 
       // Draw waveform starting from trigger point with drift
       ctx.beginPath();
-      ctx.strokeStyle = '#FF6B9D'; // Coral pink
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#22D3EE'; // Bright cyan - pops against dark background!
+      ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
+
+      // Add glow effect
+      ctx.shadowColor = '#22D3EE';
+      ctx.shadowBlur = 10;
 
       for (let i = 0; i < samplesToDisplay; i++) {
         const dataIndex = triggerPoint + driftOffset + i;
