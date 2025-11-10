@@ -19,6 +19,7 @@ export class SubtractiveEngine implements ISynthEngine {
   private filterNode: BiquadFilterNode;
   private analyser: AnalyserNode;
   private isPlaying: boolean = false;
+  private cleanupTimeoutId: number | null = null;
 
   // Current parameter values
   private currentWaveform: OscillatorType = 'sawtooth';
@@ -57,9 +58,21 @@ export class SubtractiveEngine implements ISynthEngine {
   start(frequency: number, velocity: number = 1): void {
     const now = this.audioContext.currentTime;
 
-    // Stop existing note if playing
+    // Cancel any pending cleanup
+    if (this.cleanupTimeoutId !== null) {
+      clearTimeout(this.cleanupTimeoutId);
+      this.cleanupTimeoutId = null;
+    }
+
+    // Immediately disconnect and clean up existing oscillator if present
     if (this.oscillator) {
-      this.stop();
+      try {
+        this.oscillator.disconnect();
+        this.oscillator.stop(now);
+      } catch (e) {
+        // Oscillator might already be stopped, ignore error
+      }
+      this.oscillator = null;
     }
 
     // Create new oscillator (can't reuse stopped oscillators)
@@ -89,6 +102,13 @@ export class SubtractiveEngine implements ISynthEngine {
     if (!this.oscillator) return;
 
     const now = this.audioContext.currentTime;
+    const oscillatorToStop = this.oscillator;
+
+    // Cancel any pending cleanup
+    if (this.cleanupTimeoutId !== null) {
+      clearTimeout(this.cleanupTimeoutId);
+      this.cleanupTimeoutId = null;
+    }
 
     // Apply release envelope
     this.gainNode.gain.cancelScheduledValues(now);
@@ -96,14 +116,25 @@ export class SubtractiveEngine implements ISynthEngine {
     this.gainNode.gain.linearRampToValueAtTime(0, now + this.releaseTime);
 
     // Stop oscillator after release
-    this.oscillator.stop(now + this.releaseTime);
+    try {
+      oscillatorToStop.stop(now + this.releaseTime);
+    } catch (e) {
+      // Oscillator might already be stopped, ignore error
+    }
 
-    // Clean up reference
-    setTimeout(() => {
-      this.oscillator = null;
-    }, this.releaseTime * 1000 + 100);
-
+    // Immediately clear the oscillator reference to prevent overlaps
+    this.oscillator = null;
     this.isPlaying = false;
+
+    // Disconnect after the release time
+    this.cleanupTimeoutId = window.setTimeout(() => {
+      try {
+        oscillatorToStop.disconnect();
+      } catch (e) {
+        // Already disconnected, ignore error
+      }
+      this.cleanupTimeoutId = null;
+    }, this.releaseTime * 1000 + 100);
   }
 
   /**
