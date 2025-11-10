@@ -321,7 +321,7 @@ export function WaveformView({ analyser, filterNode, cutoff, resonance }: Wavefo
       }
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [analyser]);
+  }, [analyser, filterNode, cutoff, resonance]);
 
   return (
     <canvas
