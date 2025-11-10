@@ -11,6 +11,11 @@ import { useAudioAmplitude, useEyeTracking } from './hooks';
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /**
+ * Maximum pupil offset constant (moved outside component to prevent re-creation)
+ */
+const MAX_PUPIL_OFFSET = { x: 8, y: 6 };
+
+/**
  * Animated cartoon eyes that:
  * - Look at controls when user interacts with them
  * - Blink faster based on audio amplitude
@@ -28,11 +33,10 @@ export function CartoonEyes() {
   const { averageAmplitude, isActive } = useAudioAmplitude(engine?.getAnalyser() || null);
 
   // Eye tracking with maximum pupil offset
-  const maxPupilOffset = { x: 8, y: 6 };
   const { eyePosition } = useEyeTracking({
     eyeContainerRef: leftEyeRef, // Use left eye as reference point
     targetPosition: lastInteraction.position,
-    maxPupilOffset,
+    maxPupilOffset: MAX_PUPIL_OFFSET,
     returnToRandomAfterMs: 2000,
   });
 
