@@ -8,7 +8,7 @@ interface WaveformViewProps {
 
 /**
  * Real-time waveform visualization using Canvas
- * Displays oscilloscope-style time-domain audio data
+ * Displays oscilloscope-style time-domain audio data with triggering
  */
 export function WaveformView({ analyser }: WaveformViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,6 +35,26 @@ export function WaveformView({ analyser }: WaveformViewProps) {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    /**
+     * Find trigger point for oscilloscope-style display
+     * Looks for an upward zero-crossing to stabilize the waveform
+     */
+    const findTriggerPoint = (data: Float32Array, threshold: number = 0.0): number => {
+      // Start searching from a bit into the buffer to avoid edge effects
+      const searchStart = Math.floor(data.length * 0.1);
+      const searchEnd = Math.floor(data.length * 0.5);
+
+      for (let i = searchStart; i < searchEnd; i++) {
+        // Look for upward zero crossing (previous sample below threshold, current above)
+        if (data[i - 1] < threshold && data[i] >= threshold) {
+          return i;
+        }
+      }
+
+      // No trigger found, return default starting point
+      return 0;
+    };
+
     // Render loop - runs at ~60fps
     const render = () => {
       // Get time domain data from analyser
@@ -42,8 +62,8 @@ export function WaveformView({ analyser }: WaveformViewProps) {
 
       const { width, height } = canvas.getBoundingClientRect();
 
-      // Clear with slight fade for trail effect
-      ctx.fillStyle = 'rgba(248, 249, 250, 0.2)';
+      // Clear completely for crisp display (no trails)
+      ctx.fillStyle = 'rgba(248, 249, 250, 1)';
       ctx.fillRect(0, 0, width, height);
 
       // Draw center line
@@ -54,15 +74,27 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       ctx.lineTo(width, height / 2);
       ctx.stroke();
 
-      // Draw waveform
+      // Find trigger point for stable display
+      const triggerPoint = findTriggerPoint(dataArray);
+
+      // Calculate how many samples to display (use about 2-3 cycles worth)
+      const samplesToDisplay = Math.min(
+        Math.floor(dataArray.length / 2),
+        dataArray.length - triggerPoint
+      );
+
+      // Draw waveform starting from trigger point
       ctx.beginPath();
       ctx.strokeStyle = '#FF6B9D'; // Coral pink
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
 
-      for (let i = 0; i < dataArray.length; i++) {
-        const x = (i / dataArray.length) * width;
+      for (let i = 0; i < samplesToDisplay; i++) {
+        const dataIndex = triggerPoint + i;
+        const x = (i / samplesToDisplay) * width;
         // Convert from -1 to 1 range to canvas coordinates
-        const y = ((dataArray[i] + 1) / 2) * height;
+        const y = ((dataArray[dataIndex] + 1) / 2) * height;
 
         if (i === 0) {
           ctx.moveTo(x, y);
