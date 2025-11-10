@@ -45,11 +45,11 @@ export default function Home() {
   }, [initializeEngine]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-purple-400 via-purple-300 to-purple-400 p-4 md:p-8 flex flex-col">
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-between space-y-6">
+    <main className="min-h-screen bg-gradient-to-b from-purple-400 via-purple-300 to-purple-400 p-2 md:p-4 lg:p-8 flex flex-col">
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-between space-y-3 md:space-y-6">
 
         {/* Eyes at the top */}
-        <div className="pt-8">
+        <div className="pt-2 md:pt-6 lg:pt-8">
           <CartoonEyes />
           <CartoonNose />
         </div>
@@ -68,10 +68,10 @@ export default function Home() {
         </div>
 
         {/* Controls at the bottom (compact, like a body/belly area) */}
-        <div className="space-y-4 pb-4">
+        <div className="space-y-3 md:space-y-4 pb-2 md:pb-4">
           {/* Engine Selector */}
           <div className="max-w-5xl mx-auto">
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800">
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800">
               <InteractiveControl controlId="engine-selector">
                 <EngineSelector value={engineType} onChange={setEngineType} />
               </InteractiveControl>
@@ -79,9 +79,9 @@ export default function Home() {
           </div>
 
           {/* Compact control panels */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
             {/* Common Oscillator Section (shown for both engines) */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800">
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800">
               <h2 className="text-lg font-bold text-gray-900 mb-3">
                 {engineType === 'subtractive' ? 'Wave' : 'Common'}
               </h2>
@@ -98,7 +98,7 @@ export default function Home() {
             </div>
 
             {/* Engine-Specific Controls */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800 md:col-span-2">
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800 lg:col-span-2">
               {engineType === 'subtractive' ? (
                 // Subtractive Filter Section
                 <>

@@ -25,7 +25,7 @@ export function VisualizationContainer({ analyser, filterNode, cutoff, resonance
   }[waveform];
 
   return (
-    <div className={`relative w-full h-64 md:h-80 bg-gray-900 overflow-hidden border-8 border-gray-800 shadow-2xl transition-all duration-700 ease-in-out ${mouthShapeClass}`}>
+    <div className={`relative w-full h-56 md:h-64 lg:h-80 bg-gray-900 overflow-hidden border-4 md:border-6 lg:border-8 border-gray-800 shadow-2xl transition-all duration-700 ease-in-out ${mouthShapeClass}`}>
       {/* Inner mouth/lip effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20" />
 

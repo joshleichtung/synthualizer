@@ -36,7 +36,7 @@ export function FMControls({
   onModulatorWaveformChange,
 }: FMControlsProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       {/* FM Parameters Section */}
       <div>
         <h3 className="text-md font-semibold text-gray-800 mb-3">FM Parameters</h3>
