@@ -30,7 +30,7 @@ export function VisualizationContainer({ analyser, filterNode, cutoff, resonance
       <div className="absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20" />
 
       {/* Canvas visualization */}
-      <div className="relative z-10 w-full h-full">
+      <div className="relative z-10 w-full h-full overflow-hidden">
         <WaveformView
           analyser={analyser}
           filterNode={filterNode}

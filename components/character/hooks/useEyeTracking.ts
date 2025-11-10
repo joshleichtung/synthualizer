@@ -28,11 +28,11 @@ export function useEyeTracking({
   // Calculate gaze direction from eye center to target
   useEffect(() => {
     if (!targetPosition || !eyeContainerRef.current) {
-      setMode('random');
+      setMode((prev) => prev === 'random' ? prev : 'random');
       return;
     }
 
-    setMode('tracking');
+    setMode((prev) => prev === 'tracking' ? prev : 'tracking');
 
     const eyeRect = eyeContainerRef.current.getBoundingClientRect();
     const eyeCenterX = eyeRect.left + eyeRect.width / 2;

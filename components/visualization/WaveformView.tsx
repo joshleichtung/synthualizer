@@ -326,8 +326,8 @@ export function WaveformView({ analyser, filterNode, cutoff, resonance }: Wavefo
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full"
-      style={{ imageRendering: 'auto' }}
+      className="w-full h-full block"
+      style={{ imageRendering: 'auto', display: 'block' }}
     />
   );
 }
