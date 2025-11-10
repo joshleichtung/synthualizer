@@ -13,19 +13,23 @@ interface SynthState {
   resonance: number;
   waveform: OscillatorType;
   filterType: BiquadFilterType;
+  octave: number;
 
   // Audio state
   isPlaying: boolean;
   currentNote: number | null;
+  activeFrequency: number | null;
 
   // Actions
   initializeEngine: () => void;
   triggerNote: (frequency: number, velocity?: number) => void;
   releaseNote: () => void;
+  toggleNote: (frequency: number | null) => void;
   updateCutoff: (value: number) => void;
   updateResonance: (value: number) => void;
   setWaveform: (waveform: OscillatorType) => void;
   setFilterType: (filterType: BiquadFilterType) => void;
+  setOctave: (octave: number) => void;
 }
 
 /**
@@ -39,8 +43,10 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   resonance: 1,
   waveform: 'sawtooth',
   filterType: 'lowpass',
+  octave: 2, // Start at octave 2 for better waveform visibility
   isPlaying: false,
   currentNote: null,
+  activeFrequency: null,
 
   /**
    * Initialize the synthesis engine
@@ -116,5 +122,45 @@ export const useSynthStore = create<SynthState>((set, get) => ({
     const { engine } = get();
     engine?.updateParameter('filterType', filterType);
     set({ filterType });
+  },
+
+  /**
+   * Toggle a note on or off
+   * @param frequency - Note frequency in Hz, or null to stop
+   */
+  toggleNote: (frequency: number | null) => {
+    const { engine, activeFrequency } = get();
+    if (!engine) {
+      console.warn('Engine not initialized. Call initializeEngine() first.');
+      return;
+    }
+
+    if (frequency === null || activeFrequency !== null) {
+      // Stop current note
+      engine.stop();
+      set({ isPlaying: false, currentNote: null, activeFrequency: null });
+    }
+
+    if (frequency !== null && activeFrequency !== frequency) {
+      // Start new note
+      engine.start(frequency, 1);
+      set({ isPlaying: true, currentNote: frequency, activeFrequency: frequency });
+    }
+  },
+
+  /**
+   * Set the current octave
+   * @param octave - Octave number (1-6)
+   */
+  setOctave: (octave: number) => {
+    const { activeFrequency, engine } = get();
+
+    // If a note is playing, stop it when changing octaves
+    if (activeFrequency !== null && engine) {
+      engine.stop();
+      set({ isPlaying: false, currentNote: null, activeFrequency: null });
+    }
+
+    set({ octave });
   },
 }));
