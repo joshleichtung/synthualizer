@@ -1,79 +1,158 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useSynthStore } from '@/lib/stores/synthStore';
+import { useAudioAmplitude, useEyeTracking } from './hooks';
 
 /**
- * Animated cartoon eyes that look around and blink
+ * Linear interpolation helper
+ */
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/**
+ * Animated cartoon eyes that:
+ * - Look at controls when user interacts with them
+ * - Blink faster based on audio amplitude
+ * - Return to random movement when idle
  */
 export function CartoonEyes() {
-  const [eyePosition, setEyePosition] = useState({ x: 0, y: 0 });
+  const leftEyeRef = useRef<HTMLDivElement>(null);
+  const rightEyeRef = useRef<HTMLDivElement>(null);
   const [isBlinking, setIsBlinking] = useState(false);
 
+  // Get interaction state and engine from store
+  const { lastInteraction, engine } = useSynthStore();
+
+  // Monitor audio amplitude for reactive blinking
+  const { averageAmplitude, isActive } = useAudioAmplitude(engine?.getAnalyser() || null);
+
+  // Eye tracking with maximum pupil offset
+  const maxPupilOffset = { x: 8, y: 6 };
+  const { eyePosition } = useEyeTracking({
+    eyeContainerRef: leftEyeRef, // Use left eye as reference point
+    targetPosition: lastInteraction.position,
+    maxPupilOffset,
+    returnToRandomAfterMs: 2000,
+  });
+
+  // Dynamic blink rate based on audio amplitude
   useEffect(() => {
-    // Random eye movement every 2-4 seconds
-    const moveEyes = () => {
-      const x = (Math.random() - 0.5) * 8; // -4 to 4 pixels
-      const y = (Math.random() - 0.5) * 6; // -3 to 3 pixels
-      setEyePosition({ x, y });
+    const baseBlinkInterval = 3000; // 3 seconds
+    const minBlinkInterval = 800;   // Fast blink at high amplitude
+    const maxBlinkInterval = 5000;  // Slow blink when quiet
+
+    const calculateBlinkInterval = (amplitude: number) => {
+      if (!isActive || amplitude < 0.01) {
+        // Default blink rate when no audio
+        return baseBlinkInterval + Math.random() * 2000;
+      }
+
+      // Invert: higher amplitude = faster blinks (lower interval)
+      const normalized = Math.min(amplitude / 0.3, 1); // 0.3 is "loud"
+      return lerp(maxBlinkInterval, minBlinkInterval, normalized);
     };
 
-    const eyeMoveInterval = setInterval(() => {
-      moveEyes();
-    }, 2000 + Math.random() * 2000); // 2-4 seconds
-
-    // Blink every 3-5 seconds
-    const blinkInterval = setInterval(() => {
+    const blink = () => {
       setIsBlinking(true);
       setTimeout(() => setIsBlinking(false), 150); // Blink duration
-    }, 3000 + Math.random() * 2000); // 3-5 seconds
-
-    return () => {
-      clearInterval(eyeMoveInterval);
-      clearInterval(blinkInterval);
     };
-  }, []);
+
+    // Initial blink
+    blink();
+
+    // Set up interval with dynamic timing
+    let intervalId: NodeJS.Timeout;
+    const scheduleBlink = () => {
+      const interval = calculateBlinkInterval(averageAmplitude);
+      intervalId = setTimeout(() => {
+        blink();
+        scheduleBlink(); // Schedule next blink
+      }, interval);
+    };
+
+    scheduleBlink();
+
+    return () => clearTimeout(intervalId);
+  }, [averageAmplitude, isActive]);
+
+  // Framer motion variants for smooth pupil movement
+  const pupilVariants = {
+    animate: {
+      x: eyePosition.x,
+      y: eyePosition.y,
+      transition: {
+        type: 'spring',
+        stiffness: 150,
+        damping: 20,
+        mass: 0.5,
+      },
+    },
+  };
 
   return (
     <div className="flex gap-12 justify-center items-center">
       {/* Left Eye */}
-      <div className="relative w-24 h-28 bg-white rounded-full shadow-lg overflow-hidden border-4 border-gray-800">
+      <div
+        ref={leftEyeRef}
+        className="relative w-24 h-28 bg-white rounded-full shadow-lg overflow-hidden border-4 border-gray-800"
+      >
         {!isBlinking ? (
-          <div
-            className="absolute w-10 h-10 bg-gray-900 rounded-full transition-all duration-300"
+          <motion.div
+            className="absolute w-10 h-10 bg-gray-900 rounded-full"
             style={{
-              top: `calc(50% + ${eyePosition.y}px)`,
-              left: `calc(50% + ${eyePosition.x}px)`,
-              transform: 'translate(-50%, -50%)',
+              top: '50%',
+              left: '50%',
+              x: '-50%',
+              y: '-50%',
             }}
+            variants={pupilVariants}
+            animate="animate"
           >
             {/* Pupil highlight */}
             <div className="absolute top-2 left-2 w-3 h-3 bg-white rounded-full" />
-          </div>
+          </motion.div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            initial={{ scaleY: 1 }}
+            animate={{ scaleY: 0.1 }}
+            transition={{ duration: 0.15 }}
+          >
             <div className="w-full h-1 bg-gray-900" />
-          </div>
+          </motion.div>
         )}
       </div>
 
       {/* Right Eye */}
-      <div className="relative w-24 h-28 bg-white rounded-full shadow-lg overflow-hidden border-4 border-gray-800">
+      <div
+        ref={rightEyeRef}
+        className="relative w-24 h-28 bg-white rounded-full shadow-lg overflow-hidden border-4 border-gray-800"
+      >
         {!isBlinking ? (
-          <div
-            className="absolute w-10 h-10 bg-gray-900 rounded-full transition-all duration-300"
+          <motion.div
+            className="absolute w-10 h-10 bg-gray-900 rounded-full"
             style={{
-              top: `calc(50% + ${eyePosition.y}px)`,
-              left: `calc(50% + ${eyePosition.x}px)`,
-              transform: 'translate(-50%, -50%)',
+              top: '50%',
+              left: '50%',
+              x: '-50%',
+              y: '-50%',
             }}
+            variants={pupilVariants}
+            animate="animate"
           >
             {/* Pupil highlight */}
             <div className="absolute top-2 left-2 w-3 h-3 bg-white rounded-full" />
-          </div>
+          </motion.div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            initial={{ scaleY: 1 }}
+            animate={{ scaleY: 0.1 }}
+            transition={{ duration: 0.15 }}
+          >
             <div className="w-full h-1 bg-gray-900" />
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { SubtractiveEngine } from '@/lib/audio/engines/SubtractiveEngine';
 
 /**
+ * Interaction tracking state
+ */
+interface InteractionState {
+  elementId: string | null;
+  position: { x: number; y: number } | null;
+  timestamp: number;
+}
+
+/**
  * Synth state interface
  */
 interface SynthState {
@@ -20,6 +29,9 @@ interface SynthState {
   currentNote: number | null;
   activeFrequency: number | null;
 
+  // Interaction tracking for reactive eyes
+  lastInteraction: InteractionState;
+
   // Actions
   initializeEngine: () => void;
   triggerNote: (frequency: number, velocity?: number) => void;
@@ -30,6 +42,8 @@ interface SynthState {
   setWaveform: (waveform: OscillatorType) => void;
   setFilterType: (filterType: BiquadFilterType) => void;
   setOctave: (octave: number) => void;
+  setInteraction: (elementId: string, position: { x: number; y: number }) => void;
+  clearInteraction: () => void;
 }
 
 /**
@@ -47,6 +61,11 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   isPlaying: false,
   currentNote: null,
   activeFrequency: null,
+  lastInteraction: {
+    elementId: null,
+    position: null,
+    timestamp: 0,
+  },
 
   /**
    * Initialize the synthesis engine
@@ -162,5 +181,33 @@ export const useSynthStore = create<SynthState>((set, get) => ({
     }
 
     set({ octave });
+  },
+
+  /**
+   * Set interaction target for reactive eyes
+   * @param elementId - Unique ID of the control being interacted with
+   * @param position - Screen coordinates of the control center
+   */
+  setInteraction: (elementId: string, position: { x: number; y: number }) => {
+    set({
+      lastInteraction: {
+        elementId,
+        position,
+        timestamp: Date.now(),
+      },
+    });
+  },
+
+  /**
+   * Clear current interaction (eyes return to random movement)
+   */
+  clearInteraction: () => {
+    set({
+      lastInteraction: {
+        elementId: null,
+        position: null,
+        timestamp: Date.now(),
+      },
+    });
   },
 }));

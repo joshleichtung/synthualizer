@@ -1,5 +1,7 @@
 'use client';
 
+import { InteractiveControl } from '@/components/controls/InteractiveControl';
+
 interface SimpleKeyboardProps {
   onNoteToggle: (frequency: number | null) => void;
   activeFrequency: number | null;
@@ -53,30 +55,31 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
           const isActive = activeFrequency === note.frequency;
 
           return (
-            <button
-              key={note.note}
-              onClick={() => handleNoteClick(note.frequency)}
-              className={`
-                flex-1 py-8 rounded-lg
-                border-2 transition-all select-none
-                ${
-                  isActive
-                    ? 'bg-coral-pink text-white border-coral-dark shadow-glow-coral'
-                    : 'bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 hover:border-coral-pink hover:shadow-md'
-                }
-                text-sm font-medium
-                hover:scale-105 active:scale-95
-              `}
-              aria-label={`${isActive ? 'Stop' : 'Play'} ${note.note}`}
-              aria-pressed={isActive}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-base">{note.name}</span>
-                <span className={`text-xs ${isActive ? 'opacity-80' : 'opacity-50'}`}>
-                  {Math.round(note.frequency)}Hz
-                </span>
-              </div>
-            </button>
+            <InteractiveControl key={note.note} controlId={`keyboard-note-${note.note}`}>
+              <button
+                onClick={() => handleNoteClick(note.frequency)}
+                className={`
+                  flex-1 py-8 rounded-lg
+                  border-2 transition-all select-none
+                  ${
+                    isActive
+                      ? 'bg-coral-pink text-white border-coral-dark shadow-glow-coral'
+                      : 'bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 hover:border-coral-pink hover:shadow-md'
+                  }
+                  text-sm font-medium
+                  hover:scale-105 active:scale-95
+                `}
+                aria-label={`${isActive ? 'Stop' : 'Play'} ${note.note}`}
+                aria-pressed={isActive}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-base">{note.name}</span>
+                  <span className={`text-xs ${isActive ? 'opacity-80' : 'opacity-50'}`}>
+                    {Math.round(note.frequency)}Hz
+                  </span>
+                </div>
+              </button>
+            </InteractiveControl>
           );
         })}
       </div>
