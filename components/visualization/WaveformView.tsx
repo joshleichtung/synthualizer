@@ -13,6 +13,7 @@ interface WaveformViewProps {
 export function WaveformView({ analyser }: WaveformViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
+  const phaseOffsetRef = useRef<number>(0);
 
   useEffect(() => {
     if (!analyser || !canvasRef.current) return;
@@ -77,13 +78,17 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       // Find trigger point for stable display
       const triggerPoint = findTriggerPoint(dataArray);
 
+      // Add slow drift effect (increment phase offset slowly)
+      phaseOffsetRef.current += 0.5; // Adjust this value for speed (0.5 = slow, 2 = faster)
+      const driftOffset = Math.floor(phaseOffsetRef.current);
+
       // Calculate how many samples to display (use about 2-3 cycles worth)
       const samplesToDisplay = Math.min(
         Math.floor(dataArray.length / 2),
-        dataArray.length - triggerPoint
+        dataArray.length - triggerPoint - driftOffset
       );
 
-      // Draw waveform starting from trigger point
+      // Draw waveform starting from trigger point with drift
       ctx.beginPath();
       ctx.strokeStyle = '#FF6B9D'; // Coral pink
       ctx.lineWidth = 3;
@@ -91,7 +96,9 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       ctx.lineJoin = 'round';
 
       for (let i = 0; i < samplesToDisplay; i++) {
-        const dataIndex = triggerPoint + i;
+        const dataIndex = triggerPoint + driftOffset + i;
+        if (dataIndex >= dataArray.length) break;
+
         const x = (i / samplesToDisplay) * width;
         // Convert from -1 to 1 range to canvas coordinates
         const y = ((dataArray[dataIndex] + 1) / 2) * height;
