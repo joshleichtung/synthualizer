@@ -207,6 +207,13 @@ export class SubtractiveEngine implements ISynthEngine {
   }
 
   /**
+   * Get the filter node for visualization
+   */
+  getFilterNode(): BiquadFilterNode {
+    return this.filterNode;
+  }
+
+  /**
    * Check if a note is currently playing
    */
   getIsPlaying(): boolean {

@@ -4,6 +4,9 @@ import { WaveformView } from './WaveformView';
 
 interface VisualizationContainerProps {
   analyser: AnalyserNode | null;
+  filterNode: BiquadFilterNode | null;
+  cutoff: number;
+  resonance: number;
   waveform: OscillatorType;
 }
 
@@ -12,7 +15,7 @@ interface VisualizationContainerProps {
  * Styled as a mouth for the cartoon character
  * Shape changes based on waveform type to express character personality
  */
-export function VisualizationContainer({ analyser, waveform }: VisualizationContainerProps) {
+export function VisualizationContainer({ analyser, filterNode, cutoff, resonance, waveform }: VisualizationContainerProps) {
   // Map waveform types to mouth shapes
   const mouthShapeClass = {
     sine: 'rounded-[80px]',     // Smooth, circular - calm and relaxed
@@ -28,7 +31,12 @@ export function VisualizationContainer({ analyser, waveform }: VisualizationCont
 
       {/* Canvas visualization */}
       <div className="relative z-10 w-full h-full">
-        <WaveformView analyser={analyser} />
+        <WaveformView
+          analyser={analyser}
+          filterNode={filterNode}
+          cutoff={cutoff}
+          resonance={resonance}
+        />
       </div>
 
       {/* Info overlay - shows when no audio is playing */}

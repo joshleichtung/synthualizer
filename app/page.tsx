@@ -47,6 +47,9 @@ export default function Home() {
           <div className="w-full">
             <VisualizationContainer
               analyser={engine?.getAnalyser() || null}
+              filterNode={engine?.getFilterNode() || null}
+              cutoff={cutoff}
+              resonance={resonance}
               waveform={waveform}
             />
           </div>

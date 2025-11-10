@@ -1,19 +1,93 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 
 interface WaveformViewProps {
   analyser: AnalyserNode | null;
+  filterNode: BiquadFilterNode | null;
+  cutoff: number;
+  resonance: number;
 }
+
+interface FilterResponseData {
+  frequencies: Float32Array;
+  magnitudes: Float32Array;
+  lastCutoff: number;
+  lastResonance: number;
+}
+
+/**
+ * Utility: Map frequency to X position using logarithmic scale
+ * Matches human perception of frequency
+ */
+const freqToX = (freq: number, canvasWidth: number): number => {
+  const minFreq = 20;
+  const maxFreq = 20000;
+  const logMin = Math.log10(minFreq);
+  const logMax = Math.log10(maxFreq);
+  const logFreq = Math.log10(Math.max(freq, minFreq));
+  return ((logFreq - logMin) / (logMax - logMin)) * canvasWidth;
+};
+
+/**
+ * Utility: Generate logarithmically spaced frequency array
+ */
+const generateLogFrequencies = (minFreq: number, maxFreq: number, numPoints: number): Float32Array => {
+  const frequencies = new Float32Array(numPoints);
+  const logMin = Math.log10(minFreq);
+  const logMax = Math.log10(maxFreq);
+
+  for (let i = 0; i < numPoints; i++) {
+    const t = i / (numPoints - 1);
+    const logFreq = logMin + t * (logMax - logMin);
+    frequencies[i] = Math.pow(10, logFreq);
+  }
+
+  return frequencies;
+};
 
 /**
  * Real-time waveform visualization using Canvas
  * Displays oscilloscope-style time-domain audio data with triggering
+ * Plus filter frequency response overlay
  */
-export function WaveformView({ analyser }: WaveformViewProps) {
+export function WaveformView({ analyser, filterNode, cutoff, resonance }: WaveformViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const phaseOffsetRef = useRef<number>(0);
+  const filterResponseRef = useRef<FilterResponseData | null>(null);
+
+  // Memoized logarithmic frequency array (never changes)
+  const logFrequencies = useMemo(() => generateLogFrequencies(20, 20000, 128), []);
+
+  // Calculate filter response when filter params change
+  useEffect(() => {
+    if (!filterNode) {
+      filterResponseRef.current = null;
+      return;
+    }
+
+    // Only recalculate if params changed
+    if (
+      filterResponseRef.current?.lastCutoff === cutoff &&
+      filterResponseRef.current?.lastResonance === resonance
+    ) {
+      return;
+    }
+
+    // Calculate new frequency response
+    const magnitudes = new Float32Array(logFrequencies.length);
+    const phases = new Float32Array(logFrequencies.length);
+
+    filterNode.getFrequencyResponse(logFrequencies, magnitudes, phases);
+
+    filterResponseRef.current = {
+      frequencies: logFrequencies,
+      magnitudes,
+      lastCutoff: cutoff,
+      lastResonance: resonance,
+    };
+  }, [filterNode, cutoff, resonance, logFrequencies]);
 
   useEffect(() => {
     if (!analyser || !canvasRef.current) return;
@@ -63,6 +137,96 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       return 0;
     };
 
+    /**
+     * Draw subtle frequency bands (passband vs stopband)
+     */
+    const drawFrequencyBands = (cutoffX: number) => {
+      // Passband (left of cutoff) - subtle cyan tint
+      ctx.fillStyle = 'rgba(34, 211, 238, 0.05)';
+      ctx.fillRect(0, 0, cutoffX, canvasHeight);
+
+      // Stopband (right of cutoff) - subtle red tint
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+      ctx.fillRect(cutoffX, 0, canvasWidth - cutoffX, canvasHeight);
+    };
+
+    /**
+     * Draw filter frequency response curve
+     */
+    const drawFilterCurve = (filterData: FilterResponseData) => {
+      const curveHeight = canvasHeight * 0.25; // Top 25% of canvas
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#F59E0B'; // Amber
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.7;
+
+      filterData.frequencies.forEach((freq, i) => {
+        const x = freqToX(freq, canvasWidth);
+        // Map magnitude (0-1+) to Y position, inverted (canvas 0 is top)
+        const magnitude = Math.min(filterData.magnitudes[i], 1.5); // Cap for display
+        const y = curveHeight * (1 - magnitude);
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    };
+
+    /**
+     * Draw cutoff frequency indicator line
+     */
+    const drawCutoffIndicator = (cutoffFreq: number) => {
+      const x = freqToX(cutoffFreq, canvasWidth);
+
+      // Dashed vertical line
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset
+      ctx.globalAlpha = 1.0;
+
+      // Label with background
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+      ctx.fillRect(x + 5, 5, 70, 20);
+      ctx.fillStyle = '#1F2937'; // Dark gray text
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`${Math.round(cutoffFreq)} Hz`, x + 10, 18);
+    };
+
+    /**
+     * Draw resonance peak glow
+     */
+    const drawResonanceGlow = (cutoffFreq: number, resonanceQ: number) => {
+      const x = freqToX(cutoffFreq, canvasWidth);
+
+      // Glow intensity based on Q value (0.1-20)
+      const glowIntensity = Math.min(resonanceQ / 20, 1) * 15;
+
+      if (glowIntensity > 1) {
+        ctx.shadowColor = '#EF4444';
+        ctx.shadowBlur = glowIntensity;
+        ctx.strokeStyle = '#EF4444';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.arc(x, 25, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
+      }
+    };
+
     // Render loop - runs at ~60fps
     const render = () => {
       // Get time domain data from analyser
@@ -75,6 +239,12 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       // Clear completely for crisp display (no trails) - dark mouth interior
       ctx.fillStyle = 'rgba(17, 24, 39, 1)'; // Dark gray (gray-900)
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Draw frequency bands (if filter data available)
+      if (filterResponseRef.current && filterNode) {
+        const cutoffX = freqToX(cutoff, canvasWidth);
+        drawFrequencyBands(cutoffX);
+      }
 
       // Draw center line
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -130,6 +300,13 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       }
 
       ctx.stroke();
+
+      // Draw filter visualization overlay (after waveform)
+      if (filterResponseRef.current && filterNode) {
+        drawFilterCurve(filterResponseRef.current);
+        drawCutoffIndicator(cutoff);
+        drawResonanceGlow(cutoff, resonance);
+      }
 
       // Continue animation loop
       animationRef.current = requestAnimationFrame(render);
