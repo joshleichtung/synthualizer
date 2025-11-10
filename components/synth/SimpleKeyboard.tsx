@@ -45,13 +45,13 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-lg">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Keyboard</h3>
-        <p className="text-xs text-gray-500">Click to toggle notes</p>
+    <div className="bg-white rounded-xl p-3 sm:p-4 md:p-6 shadow-lg">
+      <div className="flex justify-between items-center mb-3 sm:mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Keyboard</h3>
+        <p className="text-xs text-gray-500 hidden sm:block">Click to toggle notes</p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1 sm:gap-2">
         {notes.map((note) => {
           const isActive = activeFrequency === note.frequency;
 
@@ -60,14 +60,14 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
               <motion.button
                 onClick={() => handleNoteClick(note.frequency)}
                 className={`
-                  flex-1 py-8 rounded-lg
+                  flex-1 py-6 sm:py-8 rounded-lg
                   border-2 transition-all select-none
                   ${
                     isActive
                       ? 'bg-coral-pink text-white border-coral-dark'
                       : 'bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300'
                   }
-                  text-sm font-medium
+                  text-xs sm:text-sm font-medium
                 `}
                 style={{
                   filter: isActive

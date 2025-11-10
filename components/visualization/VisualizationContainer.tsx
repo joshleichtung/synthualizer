@@ -27,10 +27,10 @@ export function VisualizationContainer({ analyser, filterNode, cutoff, resonance
   return (
     <div className={`relative w-full h-56 md:h-64 lg:h-80 bg-gray-900 overflow-hidden border-4 md:border-6 lg:border-8 border-gray-800 shadow-2xl transition-all duration-700 ease-in-out ${mouthShapeClass}`}>
       {/* Inner mouth/lip effect */}
-      <div className="absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20" />
+      <div className={`absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20 transition-all duration-700 ease-in-out ${mouthShapeClass}`} />
 
       {/* Canvas visualization */}
-      <div className="relative z-10 w-full h-full overflow-hidden">
+      <div className={`relative z-10 w-full h-full overflow-hidden transition-all duration-700 ease-in-out ${mouthShapeClass}`}>
         <WaveformView
           analyser={analyser}
           filterNode={filterNode}

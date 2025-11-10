@@ -105,21 +105,21 @@ export function SimpleSlider({
 
       {/* Slider track with animations - increased height for better hit target */}
       <motion.div
-        className="relative py-3 group"
+        className="relative py-4 group"
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
       >
         {/* Background track with subtle shadow */}
         <div
           className={`
-          absolute top-1/2 -translate-y-1/2 left-0 right-0 h-2 bg-gray-200 rounded-full transition-all duration-200
+          absolute top-1/2 -translate-y-1/2 left-0 right-0 h-3 bg-gray-200 rounded-full transition-all duration-200
           ${isHovered ? 'shadow-inner' : ''}
         `}
         />
 
         {/* Filled portion with gradient and glow */}
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 left-0 h-2 bg-gradient-to-r from-coral-pink to-purple-soft rounded-full"
+          className="absolute top-1/2 -translate-y-1/2 left-0 h-3 bg-gradient-to-r from-coral-pink to-purple-soft rounded-full"
           style={{
             width: `${percentage}%`,
             filter: isActive
@@ -150,17 +150,18 @@ export function SimpleSlider({
 
         {/* Animated visual thumb */}
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full border-2 border-coral-pink shadow-md pointer-events-none"
+          className="absolute top-1/2 bg-white rounded-full border-3 border-coral-pink shadow-md pointer-events-none"
           style={{
             left: `${percentage}%`,
+            transform: 'translate(-50%, -50%)',
             boxShadow: isActive
               ? `0 0 12px ${glowColor}, 0 4px 6px rgba(0, 0, 0, 0.1)`
               : '0 2px 4px rgba(0, 0, 0, 0.1)',
           }}
           animate={{
-            scale: isActive ? 1.3 : isHovered ? 1.1 : 1,
-            width: isActive ? 18 : 16,
-            height: isActive ? 18 : 16,
+            scale: isActive ? 1.2 : isHovered ? 1.1 : 1,
+            width: isActive ? 24 : 20,
+            height: isActive ? 24 : 20,
           }}
           transition={{
             type: 'spring',

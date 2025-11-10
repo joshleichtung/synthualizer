@@ -29,7 +29,7 @@ export function OctaveSelector({ value, onChange }: OctaveSelectorProps) {
               key={octave}
               onClick={() => onChange(octave)}
               className={`
-                flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all
+                flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all
                 ${
                   isActive
                     ? 'bg-purple-soft text-white shadow-md shadow-purple-soft/30'

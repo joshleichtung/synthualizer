@@ -24,7 +24,7 @@ export function WaveformSelector({ value, onChange }: WaveformSelectorProps) {
       <label className="text-sm font-medium text-gray-700">
         Waveform
       </label>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {waveforms.map((wf) => {
           const isActive = value === wf.type;
 
@@ -33,7 +33,7 @@ export function WaveformSelector({ value, onChange }: WaveformSelectorProps) {
               key={wf.type}
               onClick={() => onChange(wf.type)}
               className={`
-                px-3 py-2 rounded-lg text-sm font-medium transition-all
+                px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all
                 ${
                   isActive
                     ? 'bg-coral-pink text-white shadow-md shadow-coral-pink/30'

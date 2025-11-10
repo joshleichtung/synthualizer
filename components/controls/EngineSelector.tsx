@@ -37,7 +37,7 @@ export function EngineSelector({ value, onChange }: EngineSelectorProps) {
               key={engine.type}
               onClick={() => onChange(engine.type)}
               className={`
-                px-4 py-3 rounded-xl text-sm font-medium transition-all
+                px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all
                 ${
                   isActive
                     ? 'bg-gradient-to-br from-coral-pink to-purple-soft text-white shadow-lg'
