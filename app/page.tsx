@@ -10,21 +10,33 @@ import { SimpleKeyboard } from '@/components/synth/SimpleKeyboard';
 import { CartoonEyes } from '@/components/character/CartoonEyes';
 import { CartoonNose } from '@/components/character/CartoonNose';
 import { InteractiveControl } from '@/components/controls/InteractiveControl';
+import { EngineSelector } from '@/components/controls/EngineSelector';
+import { FMControls } from '@/components/controls/FMControls';
 
 export default function Home() {
   const {
     engine,
+    engineType,
     cutoff,
     resonance,
     waveform,
     octave,
     activeFrequency,
+    modulationIndex,
+    frequencyRatio,
+    carrierWaveform,
+    modulatorWaveform,
     initializeEngine,
+    setEngineType,
     toggleNote,
     updateCutoff,
     updateResonance,
+    updateModulationIndex,
+    updateFrequencyRatio,
     setWaveform,
     setOctave,
+    setCarrierWaveform,
+    setModulatorWaveform,
   } = useSynthStore();
 
   // Initialize audio engine on mount
@@ -47,7 +59,7 @@ export default function Home() {
           <div className="w-full">
             <VisualizationContainer
               analyser={engine?.getAnalyser() || null}
-              filterNode={engine?.getFilterNode() || null}
+              filterNode={engineType === 'subtractive' && engine ? (engine as any).getFilterNode() : null}
               cutoff={cutoff}
               resonance={resonance}
               waveform={waveform}
@@ -57,48 +69,81 @@ export default function Home() {
 
         {/* Controls at the bottom (compact, like a body/belly area) */}
         <div className="space-y-4 pb-4">
+          {/* Engine Selector */}
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800">
+              <InteractiveControl controlId="engine-selector">
+                <EngineSelector value={engineType} onChange={setEngineType} />
+              </InteractiveControl>
+            </div>
+          </div>
+
           {/* Compact control panels */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-            {/* Oscillator Section */}
+            {/* Common Oscillator Section (shown for both engines) */}
             <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">Wave</h2>
-              <InteractiveControl controlId="waveform-selector">
-                <WaveformSelector value={waveform} onChange={setWaveform} />
-              </InteractiveControl>
-              <div className="mt-3">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">
+                {engineType === 'subtractive' ? 'Wave' : 'Common'}
+              </h2>
+              {engineType === 'subtractive' && (
+                <InteractiveControl controlId="waveform-selector">
+                  <WaveformSelector value={waveform} onChange={setWaveform} />
+                </InteractiveControl>
+              )}
+              <div className={engineType === 'subtractive' ? 'mt-3' : ''}>
                 <InteractiveControl controlId="octave-selector">
                   <OctaveSelector value={octave} onChange={setOctave} />
                 </InteractiveControl>
               </div>
             </div>
 
-            {/* Filter Section */}
+            {/* Engine-Specific Controls */}
             <div className="bg-white/90 backdrop-blur rounded-2xl p-4 shadow-xl border-4 border-gray-800 md:col-span-2">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">Filter</h2>
-              <div className="space-y-3">
-                <InteractiveControl controlId="cutoff-slider">
-                  <SimpleSlider
-                    label="Cutoff"
-                    value={cutoff}
-                    min={20}
-                    max={20000}
-                    step={10}
-                    onChange={updateCutoff}
-                    unit="Hz"
+              {engineType === 'subtractive' ? (
+                // Subtractive Filter Section
+                <>
+                  <h2 className="text-lg font-bold text-gray-900 mb-3">Filter</h2>
+                  <div className="space-y-3">
+                    <InteractiveControl controlId="cutoff-slider">
+                      <SimpleSlider
+                        label="Cutoff"
+                        value={cutoff}
+                        min={20}
+                        max={20000}
+                        step={10}
+                        onChange={updateCutoff}
+                        unit="Hz"
+                      />
+                    </InteractiveControl>
+                    <InteractiveControl controlId="resonance-slider">
+                      <SimpleSlider
+                        label="Resonance"
+                        value={resonance}
+                        min={0.1}
+                        max={20}
+                        step={0.1}
+                        onChange={updateResonance}
+                        unit="Q"
+                      />
+                    </InteractiveControl>
+                  </div>
+                </>
+              ) : (
+                // FM Controls Section
+                <>
+                  <h2 className="text-lg font-bold text-gray-900 mb-3">FM Synthesis</h2>
+                  <FMControls
+                    modulationIndex={modulationIndex}
+                    frequencyRatio={frequencyRatio}
+                    carrierWaveform={carrierWaveform}
+                    modulatorWaveform={modulatorWaveform}
+                    onModulationIndexChange={updateModulationIndex}
+                    onFrequencyRatioChange={updateFrequencyRatio}
+                    onCarrierWaveformChange={setCarrierWaveform}
+                    onModulatorWaveformChange={setModulatorWaveform}
                   />
-                </InteractiveControl>
-                <InteractiveControl controlId="resonance-slider">
-                  <SimpleSlider
-                    label="Resonance"
-                    value={resonance}
-                    min={0.1}
-                    max={20}
-                    step={0.1}
-                    onChange={updateResonance}
-                    unit="Q"
-                  />
-                </InteractiveControl>
-              </div>
+                </>
+              )}
             </div>
           </div>
 
