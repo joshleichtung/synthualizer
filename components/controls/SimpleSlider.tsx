@@ -103,23 +103,23 @@ export function SimpleSlider({
         </div>
       </div>
 
-      {/* Slider track with animations */}
+      {/* Slider track with animations - increased height for better hit target */}
       <motion.div
-        className="relative h-2 group"
+        className="relative py-3 group"
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
       >
         {/* Background track with subtle shadow */}
         <div
           className={`
-          absolute inset-0 bg-gray-200 rounded-full transition-all duration-200
+          absolute top-1/2 -translate-y-1/2 left-0 right-0 h-2 bg-gray-200 rounded-full transition-all duration-200
           ${isHovered ? 'shadow-inner' : ''}
         `}
         />
 
         {/* Filled portion with gradient and glow */}
         <motion.div
-          className="absolute h-full bg-gradient-to-r from-coral-pink to-purple-soft rounded-full"
+          className="absolute top-1/2 -translate-y-1/2 left-0 h-2 bg-gradient-to-r from-coral-pink to-purple-soft rounded-full"
           style={{
             width: `${percentage}%`,
             filter: isActive
@@ -150,9 +150,9 @@ export function SimpleSlider({
 
         {/* Animated visual thumb */}
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 bg-white rounded-full border-2 border-coral-pink shadow-md pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full border-2 border-coral-pink shadow-md pointer-events-none"
           style={{
-            left: `calc(${percentage}% - 8px)`,
+            left: `${percentage}%`,
             boxShadow: isActive
               ? `0 0 12px ${glowColor}, 0 4px 6px rgba(0, 0, 0, 0.1)`
               : '0 2px 4px rgba(0, 0, 0, 0.1)',
