@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { InteractiveControl } from '@/components/controls/InteractiveControl';
 
 interface SimpleKeyboardProps {
@@ -9,7 +10,7 @@ interface SimpleKeyboardProps {
 }
 
 /**
- * Simple musical keyboard with one octave
+ * Enhanced musical keyboard with interactive glow effects
  * Toggle mode: Click to start/stop notes
  */
 export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: SimpleKeyboardProps) {
@@ -56,19 +57,41 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
 
           return (
             <InteractiveControl key={note.note} controlId={`keyboard-note-${note.note}`}>
-              <button
+              <motion.button
                 onClick={() => handleNoteClick(note.frequency)}
                 className={`
                   flex-1 py-8 rounded-lg
                   border-2 transition-all select-none
                   ${
                     isActive
-                      ? 'bg-coral-pink text-white border-coral-dark shadow-glow-coral'
-                      : 'bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 hover:border-coral-pink hover:shadow-md'
+                      ? 'bg-coral-pink text-white border-coral-dark'
+                      : 'bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300'
                   }
                   text-sm font-medium
-                  hover:scale-105 active:scale-95
                 `}
+                style={{
+                  filter: isActive
+                    ? 'drop-shadow(0 0 16px rgba(255, 107, 157, 0.5))'
+                    : 'none',
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  filter: isActive
+                    ? 'drop-shadow(0 0 20px rgba(255, 107, 157, 0.6)) brightness(1.05)'
+                    : 'drop-shadow(0 0 10px rgba(255, 107, 157, 0.3))',
+                }}
+                whileTap={{
+                  scale: 0.95,
+                  filter: 'drop-shadow(0 0 24px rgba(255, 107, 157, 0.7)) brightness(1.1)',
+                }}
+                whileFocus={{
+                  filter: 'drop-shadow(0 0 8px rgba(255, 107, 157, 0.4))',
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 25,
+                }}
                 aria-label={`${isActive ? 'Stop' : 'Play'} ${note.note}`}
                 aria-pressed={isActive}
               >
@@ -78,7 +101,7 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
                     {Math.round(note.frequency)}Hz
                   </span>
                 </div>
-              </button>
+              </motion.button>
             </InteractiveControl>
           );
         })}
