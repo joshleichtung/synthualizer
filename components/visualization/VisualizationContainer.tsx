@@ -4,15 +4,25 @@ import { WaveformView } from './WaveformView';
 
 interface VisualizationContainerProps {
   analyser: AnalyserNode | null;
+  waveform: OscillatorType;
 }
 
 /**
  * Container for audio visualizations
  * Styled as a mouth for the cartoon character
+ * Shape changes based on waveform type to express character personality
  */
-export function VisualizationContainer({ analyser }: VisualizationContainerProps) {
+export function VisualizationContainer({ analyser, waveform }: VisualizationContainerProps) {
+  // Map waveform types to mouth shapes
+  const mouthShapeClass = {
+    sine: 'rounded-[80px]',     // Smooth, circular - calm and relaxed
+    square: 'rounded-[24px]',   // Sharp corners - alert and precise
+    sawtooth: 'rounded-tl-[80px] rounded-tr-[24px] rounded-br-[24px] rounded-bl-[80px]', // Asymmetric - dynamic
+    triangle: 'rounded-t-[80px] rounded-b-[24px]', // Pointed bottom - balanced
+  }[waveform];
+
   return (
-    <div className="relative w-full h-64 md:h-80 bg-gray-900 rounded-[80px] overflow-hidden border-8 border-gray-800 shadow-2xl">
+    <div className={`relative w-full h-64 md:h-80 bg-gray-900 overflow-hidden border-8 border-gray-800 shadow-2xl transition-all duration-700 ease-in-out ${mouthShapeClass}`}>
       {/* Inner mouth/lip effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20" />
 

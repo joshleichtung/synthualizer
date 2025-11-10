@@ -8,6 +8,7 @@ import { WaveformSelector } from '@/components/controls/WaveformSelector';
 import { OctaveSelector } from '@/components/controls/OctaveSelector';
 import { SimpleKeyboard } from '@/components/synth/SimpleKeyboard';
 import { CartoonEyes } from '@/components/character/CartoonEyes';
+import { CartoonNose } from '@/components/character/CartoonNose';
 import { InteractiveControl } from '@/components/controls/InteractiveControl';
 
 export default function Home() {
@@ -38,12 +39,16 @@ export default function Home() {
         {/* Eyes at the top */}
         <div className="pt-8">
           <CartoonEyes />
+          <CartoonNose />
         </div>
 
         {/* Mouth (Waveform) in the middle */}
         <div className="flex-1 flex items-center justify-center max-w-4xl mx-auto w-full">
           <div className="w-full">
-            <VisualizationContainer analyser={engine?.getAnalyser() || null} />
+            <VisualizationContainer
+              analyser={engine?.getAnalyser() || null}
+              waveform={waveform}
+            />
           </div>
         </div>
 
