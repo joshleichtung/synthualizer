@@ -17,7 +17,7 @@ export function VisualizationContainer({ analyser }: VisualizationContainerProps
       <div className="absolute inset-0 bg-gradient-to-b from-pink-300/20 to-pink-400/20" />
 
       {/* Canvas visualization */}
-      <div className="relative z-10">
+      <div className="relative z-10 w-full h-full">
         <WaveformView analyser={analyser} />
       </div>
 

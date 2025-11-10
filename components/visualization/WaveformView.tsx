@@ -23,6 +23,8 @@ export function WaveformView({ analyser }: WaveformViewProps) {
     if (!ctx) return;
 
     const dataArray = new Float32Array(analyser.fftSize);
+    let canvasWidth = 0;
+    let canvasHeight = 0;
 
     // Set canvas size to match display size with device pixel ratio
     const resizeCanvas = () => {
@@ -30,6 +32,11 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
+      canvasWidth = rect.width;
+      canvasHeight = rect.height;
+
+      // Reset transform before scaling to prevent compounding
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
     };
 
@@ -61,34 +68,37 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       // Get time domain data from analyser
       analyser.getFloatTimeDomainData(dataArray);
 
-      const { width, height } = canvas.getBoundingClientRect();
+      // Reset all shadow/style effects before clearing to prevent ghosting
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
 
       // Clear completely for crisp display (no trails) - dark mouth interior
       ctx.fillStyle = 'rgba(17, 24, 39, 1)'; // Dark gray (gray-900)
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       // Draw center line
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, height / 2);
-      ctx.lineTo(width, height / 2);
+      ctx.moveTo(0, canvasHeight / 2);
+      ctx.lineTo(canvasWidth, canvasHeight / 2);
       ctx.stroke();
 
       // Find trigger point for stable display
       const triggerPoint = findTriggerPoint(dataArray);
 
-      // Add slow drift effect (increment phase offset slowly)
-      phaseOffsetRef.current += 1.0; // Adjust this value for speed (0.5 = slow, 2 = faster)
-      const driftOffset = Math.floor(phaseOffsetRef.current);
+      // Add very subtle drift by adjusting trigger threshold slightly over time
+      phaseOffsetRef.current += 0.0002; // Very slow drift
+      const driftingThreshold = Math.sin(phaseOffsetRef.current) * 0.02; // Oscillate between -0.02 and 0.02
+      const driftedTrigger = findTriggerPoint(dataArray, driftingThreshold);
 
-      // Calculate how many samples to display (use about 2-3 cycles worth)
+      // Calculate how many samples to display
       const samplesToDisplay = Math.min(
         Math.floor(dataArray.length / 2),
-        dataArray.length - triggerPoint - driftOffset
+        dataArray.length - driftedTrigger
       );
 
-      // Draw waveform starting from trigger point with drift
+      // Draw waveform starting from trigger point
       ctx.beginPath();
       ctx.strokeStyle = '#22D3EE'; // Bright cyan - pops against dark background!
       ctx.lineWidth = 4;
@@ -100,12 +110,17 @@ export function WaveformView({ analyser }: WaveformViewProps) {
       ctx.shadowBlur = 10;
 
       for (let i = 0; i < samplesToDisplay; i++) {
-        const dataIndex = triggerPoint + driftOffset + i;
-        if (dataIndex >= dataArray.length) break;
+        const dataIndex = driftedTrigger + i;
 
-        const x = (i / samplesToDisplay) * width;
-        // Convert from -1 to 1 range to canvas coordinates
-        const y = ((dataArray[dataIndex] + 1) / 2) * height;
+        const x = (i / samplesToDisplay) * canvasWidth;
+
+        // Add vertical padding (10% on top and bottom) and scale amplitude to fit
+        const amplitudeScale = 0.8; // Use 80% of height for waveform
+        const centerY = canvasHeight / 2;
+        const amplitude = dataArray[dataIndex];
+
+        // Center waveform with padding: positive values go up, negative go down
+        const y = centerY - (amplitude * (canvasHeight / 2) * amplitudeScale);
 
         if (i === 0) {
           ctx.moveTo(x, y);
