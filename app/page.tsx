@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSynthStore } from '@/lib/stores/synthStore';
+import { useKeyboardInput } from '@/hooks/useKeyboardInput';
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer';
 import { SimpleSlider } from '@/components/controls/SimpleSlider';
 import { WaveformSelector } from '@/components/controls/WaveformSelector';
@@ -48,6 +49,9 @@ export default function Home() {
     updateSustain,
     updateRelease,
   } = useSynthStore();
+
+  // Enable QWERTY keyboard input
+  useKeyboardInput();
 
   // Initialize audio engine on first user interaction (lazy initialization)
   // This avoids browser warnings about AudioContext requiring user gesture

@@ -32,6 +32,16 @@ export function CartoonEyes() {
   // Monitor audio amplitude for reactive blinking
   const { averageAmplitude, isActive } = useAudioAmplitude(engine?.getAnalyser() || null);
 
+  // Use refs to track amplitude without re-triggering effects
+  const amplitudeRef = useRef(averageAmplitude);
+  const isActiveRef = useRef(isActive);
+
+  // Update refs when amplitude changes (doesn't trigger re-render)
+  useEffect(() => {
+    amplitudeRef.current = averageAmplitude;
+    isActiveRef.current = isActive;
+  }, [averageAmplitude, isActive]);
+
   // Eye tracking with maximum pupil offset
   const { eyePosition } = useEyeTracking({
     eyeContainerRef: leftEyeRef, // Use left eye as reference point
@@ -41,13 +51,18 @@ export function CartoonEyes() {
   });
 
   // Dynamic blink rate based on audio amplitude
+  // Only re-initialize when engine changes, not on every amplitude update
   useEffect(() => {
     const baseBlinkInterval = 3000; // 3 seconds
     const minBlinkInterval = 800;   // Fast blink at high amplitude
     const maxBlinkInterval = 5000;  // Slow blink when quiet
 
-    const calculateBlinkInterval = (amplitude: number) => {
-      if (!isActive || amplitude < 0.01) {
+    const calculateBlinkInterval = () => {
+      // Read from refs to get current amplitude without re-triggering effect
+      const amplitude = amplitudeRef.current;
+      const active = isActiveRef.current;
+
+      if (!active || amplitude < 0.01) {
         // Default blink rate when no audio
         return baseBlinkInterval + Math.random() * 2000;
       }
@@ -62,23 +77,21 @@ export function CartoonEyes() {
       setTimeout(() => setIsBlinking(false), 150); // Blink duration
     };
 
-    // Initial blink
-    blink();
-
     // Set up interval with dynamic timing
     let intervalId: NodeJS.Timeout;
     const scheduleBlink = () => {
-      const interval = calculateBlinkInterval(averageAmplitude);
+      const interval = calculateBlinkInterval();
       intervalId = setTimeout(() => {
         blink();
         scheduleBlink(); // Schedule next blink
       }, interval);
     };
 
-    scheduleBlink();
+    // Start blinking after a short delay
+    intervalId = setTimeout(scheduleBlink, 1000);
 
     return () => clearTimeout(intervalId);
-  }, [averageAmplitude, isActive]);
+  }, [engine]); // Only re-run when engine changes
 
   // Framer motion variants for smooth pupil movement
   const pupilVariants = {

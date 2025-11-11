@@ -127,8 +127,12 @@ export class SubtractiveEngine implements ISynthEngine {
   private triggerAttack(voice: Voice, velocity: number): void {
     const now = this.audioContext.currentTime;
 
-    // Calculate gain values (divide by MAX_VOICES to prevent clipping when all play)
-    const peakGain = (velocity * 0.5) / this.MAX_VOICES;
+    // Calculate gain values with dynamic voice compensation
+    // Use a moderate scaling factor that sounds good for 1-3 voices (typical usage)
+    // instead of dividing by MAX_VOICES which makes single notes too quiet
+    const activeVoiceCount = Math.max(this.activeNotes.size, 1);
+    const gainScale = Math.min(activeVoiceCount, 3); // Scale up to 3 voices, then cap
+    const peakGain = (velocity * 0.5) / gainScale;
     const sustainGain = Math.max(peakGain * this.sustainLevel, 0.001);
 
     // Cancel any scheduled automation
@@ -177,11 +181,10 @@ export class SubtractiveEngine implements ISynthEngine {
     // Stop oscillator after release
     this.stopVoiceOscillator(voice, now + this.releaseTime);
 
-    // Mark voice as inactive after release completes
-    window.setTimeout(() => {
-      voice.active = false;
-      voice.frequency = null;
-    }, this.releaseTime * 1000 + 100);
+    // Mark voice as inactive immediately to prevent race condition
+    // The gain envelope will fade out naturally
+    voice.active = false;
+    voice.frequency = null;
   }
 
   /**
@@ -194,15 +197,26 @@ export class SubtractiveEngine implements ISynthEngine {
       return freeVoice;
     }
 
-    // All voices busy - steal oldest voice (polite stealing)
+    // All voices busy - steal oldest voice
     const oldestVoice = this.voices.reduce((oldest, current) =>
       current.noteStartTime < oldest.noteStartTime ? current : oldest
     );
 
-    // Trigger release on stolen voice before re-using
+    // Stop stolen voice immediately (no release envelope for stolen voices)
+    // This prevents warbling/beating between old and new oscillators
     if (oldestVoice.frequency !== null) {
       this.activeNotes.delete(oldestVoice.frequency);
-      this.triggerRelease(oldestVoice);
+
+      // Stop oscillator immediately, not after release time
+      this.stopVoiceOscillator(oldestVoice, this.audioContext.currentTime);
+
+      // Set gain to 0 immediately (no release envelope)
+      oldestVoice.voiceGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+      oldestVoice.voiceGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+      // Mark as inactive
+      oldestVoice.active = false;
+      oldestVoice.frequency = null;
     }
 
     return oldestVoice;
@@ -245,7 +259,9 @@ export class SubtractiveEngine implements ISynthEngine {
    */
   noteOff(frequency: number): void {
     const voice = this.activeNotes.get(frequency);
-    if (!voice) return;
+    if (!voice) {
+      return;
+    }
 
     // Remove from active notes
     this.activeNotes.delete(frequency);

@@ -99,10 +99,15 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
         })}
       </div>
 
-      {/* Instruction hint */}
-      <p className="text-xs text-gray-400 text-center mt-4">
-        Tip: Click a note to toggle it on/off. Adjust controls while playing!
-      </p>
+      {/* Instruction hints */}
+      <div className="mt-4 space-y-1">
+        <p className="text-xs text-gray-400 text-center">
+          Click notes or use QWERTY keyboard: <span className="font-mono font-semibold">Z-/</span> (lower) • <span className="font-mono font-semibold">Q-]</span> (upper)
+        </p>
+        <p className="text-xs text-gray-400 text-center">
+          Hold <span className="font-mono font-semibold">Shift</span> to sustain notes
+        </p>
+      </div>
     </div>
   );
 }
