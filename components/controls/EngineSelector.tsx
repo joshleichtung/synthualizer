@@ -47,7 +47,7 @@ export function EngineSelector({ value, onChange }: EngineSelectorProps) {
               style={{
                 filter: isActive
                   ? 'drop-shadow(0 0 14px rgba(255, 107, 157, 0.45))'
-                  : 'none',
+                  : 'drop-shadow(0 0 0px rgba(255, 107, 157, 0))',
               }}
               whileHover={{
                 scale: 1.02,

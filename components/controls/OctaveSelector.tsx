@@ -37,7 +37,7 @@ export function OctaveSelector({ value, onChange }: OctaveSelectorProps) {
                 }
               `}
               style={{
-                filter: isActive ? 'drop-shadow(0 0 12px rgba(198, 135, 240, 0.4))' : 'none',
+                filter: isActive ? 'drop-shadow(0 0 12px rgba(198, 135, 240, 0.4))' : 'drop-shadow(0 0 0px rgba(198, 135, 240, 0))',
               }}
               whileHover={{
                 scale: 1.05,

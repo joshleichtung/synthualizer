@@ -41,7 +41,7 @@ export function WaveformSelector({ value, onChange }: WaveformSelectorProps) {
                 }
               `}
               style={{
-                filter: isActive ? 'drop-shadow(0 0 12px rgba(255, 107, 157, 0.4))' : 'none',
+                filter: isActive ? 'drop-shadow(0 0 12px rgba(255, 107, 157, 0.4))' : 'drop-shadow(0 0 0px rgba(255, 107, 157, 0))',
               }}
               whileHover={{
                 scale: 1.05,

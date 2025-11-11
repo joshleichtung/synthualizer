@@ -72,7 +72,7 @@ export function SimpleKeyboard({ onNoteToggle, activeFrequency, octave }: Simple
                 style={{
                   filter: isActive
                     ? 'drop-shadow(0 0 16px rgba(255, 107, 157, 0.5))'
-                    : 'none',
+                    : 'drop-shadow(0 0 0px rgba(255, 107, 157, 0))',
                 }}
                 whileHover={{
                   scale: 1.05,
