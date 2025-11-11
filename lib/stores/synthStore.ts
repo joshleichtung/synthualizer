@@ -313,20 +313,57 @@ export const useSynthStore = create<SynthState>((set, get) => ({
    * @param frequency - Note frequency in Hz, or null to stop
    */
   toggleNote: (frequency: number | null) => {
-    const { activeFrequency, noteOn, noteOff } = get();
+    let { engine, activeFrequency, initializeEngine } = get();
+
+    // Lazy initialize engine on first interaction
+    if (!engine) {
+      initializeEngine();
+      engine = get().engine;
+      if (!engine) {
+        console.error('Failed to initialize engine');
+        return;
+      }
+    }
 
     if (frequency === null || activeFrequency !== null) {
       // Stop current note
-      if (activeFrequency !== null) {
-        noteOff(activeFrequency);
+      if (activeFrequency !== null && 'noteOff' in engine) {
+        engine.noteOff(activeFrequency);
+      } else if (activeFrequency !== null) {
+        engine.stop();
       }
-      set({ activeFrequency: null });
+
+      // Update active voice count
+      const activeVoices = 'getActiveVoiceCount' in engine
+        ? engine.getActiveVoiceCount()
+        : 0;
+
+      set({
+        activeFrequency: null,
+        isPlaying: activeVoices > 0,
+        activeVoices,
+      });
     }
 
     if (frequency !== null && activeFrequency !== frequency) {
       // Start new note
-      noteOn(frequency, 1);
-      set({ activeFrequency: frequency });
+      if ('noteOn' in engine) {
+        engine.noteOn(frequency, 1);
+      } else {
+        engine.start(frequency, 1);
+      }
+
+      // Update active voice count
+      const activeVoices = 'getActiveVoiceCount' in engine
+        ? engine.getActiveVoiceCount()
+        : 0;
+
+      set({
+        activeFrequency: frequency,
+        currentNote: frequency,
+        isPlaying: true,
+        activeVoices,
+      });
     }
   },
 
