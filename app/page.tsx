@@ -62,13 +62,13 @@ export default function Home() {
       <div className="max-w-7xl mx-auto w-full h-full flex flex-col p-4 pt-8">
 
         {/* Eyes: Fixed height with padding for eyebrows */}
-        <div className="flex-none h-24 flex items-center justify-center">
+        <div className="flex-none h-24 flex items-center justify-center mb-4">
           <CartoonEyes />
         </div>
 
-        {/* Waveform visualization: Flexible, takes available space */}
-        <div className="flex-1 min-h-0 flex items-center justify-center px-4 pt-2 pb-1">
-          <div className="w-full h-full max-w-5xl">
+        {/* Waveform visualization: Flexible but constrained */}
+        <div className="flex-1 min-h-0 flex items-center justify-center px-4">
+          <div className="w-full max-h-[280px] max-w-5xl">
             <VisualizationContainer
               analyser={engine?.getAnalyser() || null}
               filterNode={engineType === 'subtractive' && engine ? (engine as any).getFilterNode() : null}
@@ -79,8 +79,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Controls: Fixed height, tabbed panels (no keyboard visual) */}
-        <div className="flex-none h-[280px] max-w-6xl mx-auto w-full">
+        {/* Controls: Fixed height, tabbed panels */}
+        <div className="flex-none h-[280px] max-w-6xl mx-auto w-full mt-4">
           {/* Tabbed control panels */}
           <TabbedPanel
             defaultTab="synth"
@@ -130,10 +130,27 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* Octave selector */}
-                      <div className="flex-1">
+                      {/* Octave +/- */}
+                      <div className="flex-none">
+                        <label className="text-xs font-semibold text-gray-700 mb-1 block">Octave</label>
                         <InteractiveControl controlId="octave-selector">
-                          <OctaveSelector value={octave} onChange={setOctave} />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setOctave(Math.max(1, octave - 1))}
+                              disabled={octave <= 1}
+                              className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-gray-700"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center font-bold text-gray-900">{octave}</span>
+                            <button
+                              onClick={() => setOctave(Math.min(6, octave + 1))}
+                              disabled={octave >= 6}
+                              className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-gray-700"
+                            >
+                              +
+                            </button>
+                          </div>
                         </InteractiveControl>
                       </div>
                     </div>
