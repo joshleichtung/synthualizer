@@ -4,17 +4,15 @@ import { useEffect } from 'react';
 import { useSynthStore } from '@/lib/stores/synthStore';
 import { useKeyboardInput } from '@/hooks/useKeyboardInput';
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer';
-import { SimpleSlider } from '@/components/controls/SimpleSlider';
+import { Knob } from '@/components/controls/Knob';
 import { WaveformSelector } from '@/components/controls/WaveformSelector';
 import { OctaveSelector } from '@/components/controls/OctaveSelector';
-import { SimpleKeyboard } from '@/components/synth/SimpleKeyboard';
 import { CartoonEyes } from '@/components/character/CartoonEyes';
-import { CartoonNose } from '@/components/character/CartoonNose';
 import { InteractiveControl } from '@/components/controls/InteractiveControl';
 import { EngineSelector } from '@/components/controls/EngineSelector';
 import { FMControls } from '@/components/controls/FMControls';
 import { ADSRDisplay } from '@/components/controls/ADSRDisplay';
-import { ADSRControls } from '@/components/controls/ADSRControls';
+import { TabbedPanel } from '@/components/controls/TabbedPanel';
 
 export default function Home() {
   const {
@@ -60,18 +58,17 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-purple-400 via-purple-300 to-purple-400 p-2 md:p-4 lg:p-8 flex flex-col">
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-between space-y-3 md:space-y-6">
+    <main className="h-screen bg-gradient-to-b from-purple-400 via-purple-300 to-purple-400 flex flex-col overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full h-full flex flex-col p-4 pt-8">
 
-        {/* Eyes at the top */}
-        <div className="pt-2 md:pt-6 lg:pt-8">
+        {/* Eyes: Fixed height with padding for eyebrows */}
+        <div className="flex-none h-24 flex items-center justify-center">
           <CartoonEyes />
-          <CartoonNose />
         </div>
 
-        {/* Mouth (Waveform) in the middle */}
-        <div className="flex-1 flex items-center justify-center max-w-4xl mx-auto w-full">
-          <div className="w-full">
+        {/* Waveform visualization: Flexible, takes available space */}
+        <div className="flex-1 min-h-0 flex items-center justify-center px-4 pt-2 pb-1">
+          <div className="w-full h-full max-w-5xl">
             <VisualizationContainer
               analyser={engine?.getAnalyser() || null}
               filterNode={engineType === 'subtractive' && engine ? (engine as any).getFilterNode() : null}
@@ -82,121 +79,166 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Controls at the bottom (compact, like a body/belly area) */}
-        <div className="space-y-3 md:space-y-4 pb-2 md:pb-4">
-          {/* Engine Selector */}
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800">
-              <InteractiveControl controlId="engine-selector">
-                <EngineSelector value={engineType} onChange={setEngineType} />
-              </InteractiveControl>
-            </div>
-          </div>
+        {/* Controls: Fixed height, tabbed panels (no keyboard visual) */}
+        <div className="flex-none h-[280px] max-w-6xl mx-auto w-full">
+          {/* Tabbed control panels */}
+          <TabbedPanel
+            defaultTab="synth"
+            tabs={[
+              {
+                id: 'synth',
+                label: 'Synth',
+                content: (
+                  <div className="p-4 h-[240px] flex flex-col justify-between">
+                    {/* Top row: Engine selector (compact) + Wave/Octave selectors */}
+                    <div className="flex items-center gap-6">
+                      {/* Compact engine selector */}
+                      <div className="flex-none">
+                        <label className="text-xs font-semibold text-gray-700 mb-1 block">Engine</label>
+                        <InteractiveControl controlId="engine-selector">
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setEngineType('subtractive')}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded ${
+                                engineType === 'subtractive'
+                                  ? 'bg-coral-pink text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              Sub
+                            </button>
+                            <button
+                              onClick={() => setEngineType('fm')}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded ${
+                                engineType === 'fm'
+                                  ? 'bg-coral-pink text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              FM
+                            </button>
+                          </div>
+                        </InteractiveControl>
+                      </div>
 
-          {/* Compact control panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
-            {/* Common Oscillator Section (shown for both engines) */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">
-                {engineType === 'subtractive' ? 'Wave' : 'Common'}
-              </h2>
-              {engineType === 'subtractive' && (
-                <InteractiveControl controlId="waveform-selector">
-                  <WaveformSelector value={waveform} onChange={setWaveform} />
-                </InteractiveControl>
-              )}
-              <div className={engineType === 'subtractive' ? 'mt-3' : ''}>
-                <InteractiveControl controlId="octave-selector">
-                  <OctaveSelector value={octave} onChange={setOctave} />
-                </InteractiveControl>
-              </div>
-            </div>
+                      {/* Wave selector */}
+                      {engineType === 'subtractive' && (
+                        <div className="flex-none">
+                          <InteractiveControl controlId="waveform-selector">
+                            <WaveformSelector value={waveform} onChange={setWaveform} />
+                          </InteractiveControl>
+                        </div>
+                      )}
 
-            {/* Engine-Specific Controls */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl p-3 md:p-4 shadow-xl border-2 md:border-4 border-gray-800 lg:col-span-2">
-              {engineType === 'subtractive' ? (
-                // Subtractive Filter Section
-                <>
-                  <h2 className="text-lg font-bold text-gray-900 mb-3">Filter</h2>
-                  <div className="space-y-3">
-                    <InteractiveControl controlId="cutoff-slider">
-                      <SimpleSlider
-                        label="Cutoff"
-                        value={cutoff}
-                        min={20}
-                        max={20000}
-                        step={10}
-                        onChange={updateCutoff}
-                        unit="Hz"
-                      />
-                    </InteractiveControl>
-                    <InteractiveControl controlId="resonance-slider">
-                      <SimpleSlider
-                        label="Resonance"
-                        value={resonance}
-                        min={0.1}
-                        max={20}
-                        step={0.1}
-                        onChange={updateResonance}
-                        unit="Q"
-                      />
-                    </InteractiveControl>
+                      {/* Octave selector */}
+                      <div className="flex-1">
+                        <InteractiveControl controlId="octave-selector">
+                          <OctaveSelector value={octave} onChange={setOctave} />
+                        </InteractiveControl>
+                      </div>
+                    </div>
+
+                    {/* Bottom row: Knobs */}
+                    <div className="flex gap-6 justify-center items-center">
+                      {engineType === 'subtractive' ? (
+                        <>
+                          <InteractiveControl controlId="cutoff-knob">
+                            <Knob
+                              label="Cutoff"
+                              value={cutoff}
+                              min={20}
+                              max={20000}
+                              step={10}
+                              onChange={updateCutoff}
+                              unit="Hz"
+                              logarithmic
+                            />
+                          </InteractiveControl>
+                          <InteractiveControl controlId="resonance-knob">
+                            <Knob
+                              label="Resonance"
+                              value={resonance}
+                              min={0.1}
+                              max={20}
+                              step={0.1}
+                              onChange={updateResonance}
+                              unit="Q"
+                            />
+                          </InteractiveControl>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-700">FM Controls Coming Soon</div>
+                      )}
+                    </div>
                   </div>
-                </>
-              ) : (
-                // FM Controls Section
-                <>
-                  <h2 className="text-lg font-bold text-gray-900 mb-3">FM Synthesis</h2>
-                  <FMControls
-                    modulationIndex={modulationIndex}
-                    frequencyRatio={frequencyRatio}
-                    carrierWaveform={carrierWaveform}
-                    modulatorWaveform={modulatorWaveform}
-                    onModulationIndexChange={updateModulationIndex}
-                    onFrequencyRatioChange={updateFrequencyRatio}
-                    onCarrierWaveformChange={setCarrierWaveform}
-                    onModulatorWaveformChange={setModulatorWaveform}
-                  />
-                </>
-              )}
-            </div>
-          </div>
+                ),
+              },
+              {
+                id: 'envelope',
+                label: 'Envelope',
+                content: (
+                  <div className="p-4 h-[240px] flex items-center gap-6">
+                    {/* ADSR Visual */}
+                    <div className="flex-none w-48">
+                      <ADSRDisplay
+                        attack={attack}
+                        decay={decay}
+                        sustain={sustain}
+                        release={release}
+                      />
+                    </div>
 
-          {/* ADSR Envelope Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
-            {/* ADSR Visual Display */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border-2 md:border-4 border-gray-800 overflow-hidden">
-              <ADSRDisplay
-                attack={attack}
-                decay={decay}
-                sustain={sustain}
-                release={release}
-              />
-            </div>
-
-            {/* ADSR Controls */}
-            <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border-2 md:border-4 border-gray-800 overflow-hidden lg:col-span-2">
-              <ADSRControls
-                attack={attack}
-                decay={decay}
-                sustain={sustain}
-                release={release}
-                onAttackChange={updateAttack}
-                onDecayChange={updateDecay}
-                onSustainChange={updateSustain}
-                onReleaseChange={updateRelease}
-              />
-            </div>
-          </div>
-
-          {/* Keyboard */}
-          <div className="max-w-5xl mx-auto">
-            <SimpleKeyboard
-              onNoteToggle={toggleNote}
-              activeFrequency={activeFrequency}
-              octave={octave}
-            />
-          </div>
+                    {/* ADSR Knobs */}
+                    <div className="flex-1 flex gap-6 justify-center items-center">
+                      <InteractiveControl controlId="attack-knob">
+                        <Knob
+                          label="Attack"
+                          value={attack}
+                          min={0}
+                          max={2}
+                          step={0.01}
+                          onChange={updateAttack}
+                          unit="s"
+                        />
+                      </InteractiveControl>
+                      <InteractiveControl controlId="decay-knob">
+                        <Knob
+                          label="Decay"
+                          value={decay}
+                          min={0}
+                          max={2}
+                          step={0.01}
+                          onChange={updateDecay}
+                          unit="s"
+                        />
+                      </InteractiveControl>
+                      <InteractiveControl controlId="sustain-knob">
+                        <Knob
+                          label="Sustain"
+                          value={sustain}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          onChange={updateSustain}
+                        />
+                      </InteractiveControl>
+                      <InteractiveControl controlId="release-knob">
+                        <Knob
+                          label="Release"
+                          value={release}
+                          min={0}
+                          max={5}
+                          step={0.01}
+                          onChange={updateRelease}
+                          unit="s"
+                        />
+                      </InteractiveControl>
+                    </div>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </div>
       </div>
     </main>
