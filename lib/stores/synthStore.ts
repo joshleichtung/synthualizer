@@ -44,6 +44,7 @@ interface SynthState {
   isPlaying: boolean;
   currentNote: number | null;
   activeFrequency: number | null;
+  activeVoices: number;              // Current count of active voices (for visualization)
 
   // Interaction tracking for reactive eyes
   lastInteraction: InteractionState;
@@ -51,6 +52,12 @@ interface SynthState {
   // Actions
   initializeEngine: () => void;
   setEngineType: (type: 'subtractive' | 'fm') => void;
+
+  // Polyphonic note control
+  noteOn: (frequency: number, velocity?: number) => void;
+  noteOff: (frequency: number) => void;
+
+  // Legacy actions (for backward compatibility)
   triggerNote: (frequency: number, velocity?: number) => void;
   releaseNote: () => void;
   toggleNote: (frequency: number | null) => void;
@@ -113,6 +120,7 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   isPlaying: false,
   currentNote: null,
   activeFrequency: null,
+  activeVoices: 0,
 
   // Interaction state
   lastInteraction: {
@@ -159,9 +167,78 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   },
 
   /**
+   * Start playing a note (polyphonic)
+   * @param frequency - Note frequency in Hz
+   * @param velocity - Note velocity (0-1)
+   */
+  noteOn: (frequency: number, velocity: number = 1) => {
+    let { engine, initializeEngine } = get();
+
+    // Lazy initialize engine on first interaction
+    if (!engine) {
+      initializeEngine();
+      engine = get().engine;
+      if (!engine) {
+        console.error('Failed to initialize engine');
+        return;
+      }
+    }
+
+    // Call engine's noteOn method
+    if ('noteOn' in engine) {
+      engine.noteOn(frequency, velocity);
+    } else {
+      // Fallback for engines that don't support noteOn yet (e.g., FMEngine)
+      engine.start(frequency, velocity);
+    }
+
+    // Update active voice count
+    const activeVoices = 'getActiveVoiceCount' in engine
+      ? engine.getActiveVoiceCount()
+      : 0;
+
+    set({
+      isPlaying: true,
+      currentNote: frequency,
+      activeVoices,
+    });
+  },
+
+  /**
+   * Stop playing a note (polyphonic)
+   * @param frequency - Note frequency in Hz
+   */
+  noteOff: (frequency: number) => {
+    const { engine } = get();
+    if (!engine) return;
+
+    // Call engine's noteOff method
+    if ('noteOff' in engine) {
+      engine.noteOff(frequency);
+    } else {
+      // Fallback for engines that don't support noteOff yet
+      engine.stop();
+    }
+
+    // Update active voice count
+    const activeVoices = 'getActiveVoiceCount' in engine
+      ? engine.getActiveVoiceCount()
+      : 0;
+
+    const isPlaying = activeVoices > 0;
+
+    set({
+      isPlaying,
+      currentNote: isPlaying ? null : null,
+      activeVoices,
+    });
+  },
+
+  /**
    * Trigger a note with the synth
    * @param frequency - Note frequency in Hz
    * @param velocity - Note velocity (0-1)
+   * @deprecated Use noteOn instead
    */
   triggerNote: (frequency: number, velocity: number = 1) => {
     let { engine, initializeEngine } = get();
@@ -232,32 +309,24 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   },
 
   /**
-   * Toggle a note on or off
+   * Toggle a note on or off (legacy behavior for on-screen keyboard)
    * @param frequency - Note frequency in Hz, or null to stop
    */
   toggleNote: (frequency: number | null) => {
-    let { engine, activeFrequency, initializeEngine } = get();
-
-    // Lazy initialize engine on first interaction
-    if (!engine) {
-      initializeEngine();
-      engine = get().engine;
-      if (!engine) {
-        console.error('Failed to initialize engine');
-        return;
-      }
-    }
+    const { activeFrequency, noteOn, noteOff } = get();
 
     if (frequency === null || activeFrequency !== null) {
       // Stop current note
-      engine.stop();
-      set({ isPlaying: false, currentNote: null, activeFrequency: null });
+      if (activeFrequency !== null) {
+        noteOff(activeFrequency);
+      }
+      set({ activeFrequency: null });
     }
 
     if (frequency !== null && activeFrequency !== frequency) {
       // Start new note
-      engine.start(frequency, 1);
-      set({ isPlaying: true, currentNote: frequency, activeFrequency: frequency });
+      noteOn(frequency, 1);
+      set({ activeFrequency: frequency });
     }
   },
 

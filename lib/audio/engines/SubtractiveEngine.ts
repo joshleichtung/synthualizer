@@ -1,45 +1,56 @@
 import { getAudioContext } from '../audioContext';
 import { ISynthEngine } from '@/types/synth';
+import { Voice } from '@/types/voice';
 
 /**
- * Subtractive synthesis engine
+ * Subtractive synthesis engine - Polyphonic (6 voices)
  *
- * Signal flow: Oscillator → Filter → Gain → Analyser → Output
+ * Signal flow: Voice → Mixer → Filter → Master Gain → Analyser → Output
+ * Each voice: Oscillator → Voice Gain (ADSR)
  *
- * Features (MVP):
- * - Single oscillator with multiple waveforms
- * - Biquad filter (low-pass, high-pass, band-pass)
- * - Simple attack/release envelope
+ * Features:
+ * - 6-voice polyphony with voice stealing
+ * - Per-voice ADSR envelopes
+ * - Shared filter and master gain
  * - Real-time audio analysis for visualization
  */
 export class SubtractiveEngine implements ISynthEngine {
   private audioContext: AudioContext;
-  private oscillator: OscillatorNode | null = null;
-  private gainNode: GainNode;
+
+  // Voice pool (6 voices)
+  private voices: Voice[] = [];
+  private activeNotes: Map<number, Voice> = new Map(); // frequency → voice
+
+  // Shared audio nodes
+  private mixer: GainNode;          // Mix all voices
   private filterNode: BiquadFilterNode;
+  private masterGain: GainNode;     // Master output
   private analyser: AnalyserNode;
-  private isPlaying: boolean = false;
-  private cleanupTimeoutId: number | null = null;
 
   // Current parameter values
   private currentWaveform: OscillatorType = 'sawtooth';
 
-  // ADSR envelope parameters
+  // ADSR envelope parameters (shared by all voices)
   private attackTime: number = 0.01;
   private decayTime: number = 0.1;
   private sustainLevel: number = 0.7;
   private releaseTime: number = 0.3;
 
+  // Voice management
+  private readonly MAX_VOICES = 6;
+
   constructor() {
     this.audioContext = getAudioContext();
 
-    // Create persistent nodes
-    this.gainNode = this.audioContext.createGain();
+    // Create shared audio nodes
+    this.mixer = this.audioContext.createGain();
     this.filterNode = this.audioContext.createBiquadFilter();
+    this.masterGain = this.audioContext.createGain();
     this.analyser = this.audioContext.createAnalyser();
 
     // Set default values
-    this.gainNode.gain.value = 0;
+    this.mixer.gain.value = 1.0;
+    this.masterGain.gain.value = 1.0;
     this.filterNode.type = 'lowpass';
     this.filterNode.frequency.value = 1000;
     this.filterNode.Q.value = 1;
@@ -48,131 +59,219 @@ export class SubtractiveEngine implements ISynthEngine {
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
 
-    // Connect audio graph: Filter → Gain → Analyser → Destination
-    this.filterNode.connect(this.gainNode);
-    this.gainNode.connect(this.analyser);
+    // Connect audio graph: Mixer → Filter → Master → Analyser → Destination
+    this.mixer.connect(this.filterNode);
+    this.filterNode.connect(this.masterGain);
+    this.masterGain.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
+
+    // Create voice pool
+    for (let i = 0; i < this.MAX_VOICES; i++) {
+      this.voices.push(this.createVoice(i));
+    }
   }
 
   /**
-   * Start playing a note
-   * @param frequency - Frequency in Hz
-   * @param velocity - Note velocity (0-1), defaults to 1
+   * Create a new voice in the pool
    */
-  start(frequency: number, velocity: number = 1): void {
+  private createVoice(id: number): Voice {
+    const voiceGain = this.audioContext.createGain();
+    voiceGain.gain.value = 0;
+    voiceGain.connect(this.mixer);
+
+    return {
+      id,
+      active: false,
+      frequency: null,
+      noteStartTime: 0,
+      oscillator: null,
+      voiceGain,
+    };
+  }
+
+  /**
+   * Start a voice's oscillator
+   */
+  private startVoiceOscillator(voice: Voice, frequency: number): void {
+    // Create oscillator
+    voice.oscillator = this.audioContext.createOscillator();
+    voice.oscillator.type = this.currentWaveform;
+    voice.oscillator.frequency.value = frequency;
+
+    // Connect to voice gain
+    voice.oscillator.connect(voice.voiceGain);
+
+    // Start immediately
+    voice.oscillator.start(this.audioContext.currentTime);
+  }
+
+  /**
+   * Stop a voice's oscillator
+   */
+  private stopVoiceOscillator(voice: Voice, when: number = this.audioContext.currentTime): void {
+    if (!voice.oscillator) return;
+
+    try {
+      voice.oscillator.stop(when);
+      voice.oscillator.disconnect();
+    } catch (e) {
+      // Oscillator might already be stopped
+    }
+
+    voice.oscillator = null;
+  }
+
+  /**
+   * Trigger attack phase for a voice
+   */
+  private triggerAttack(voice: Voice, velocity: number): void {
     const now = this.audioContext.currentTime;
 
-    // Cancel any pending cleanup
-    if (this.cleanupTimeoutId !== null) {
-      clearTimeout(this.cleanupTimeoutId);
-      this.cleanupTimeoutId = null;
-    }
-
-    // Immediately disconnect and clean up existing oscillator if present
-    if (this.oscillator) {
-      try {
-        this.oscillator.disconnect();
-        this.oscillator.stop(now);
-      } catch (e) {
-        // Oscillator might already be stopped, ignore error
-      }
-      this.oscillator = null;
-    }
-
-    // Create new oscillator (can't reuse stopped oscillators)
-    this.oscillator = this.audioContext.createOscillator();
-    this.oscillator.type = this.currentWaveform;
-    this.oscillator.frequency.value = frequency;
-
-    // Connect oscillator to filter
-    this.oscillator.connect(this.filterNode);
-    this.oscillator.start(now);
-
-    // ===== ADSR ENVELOPE =====
-    // Calculate gain values
-    const peakGain = velocity * 0.5; // Max 0.5 to avoid clipping
-    const sustainGain = Math.max(peakGain * this.sustainLevel, 0.001); // Ensure non-zero for exponential ramps
+    // Calculate gain values (divide by MAX_VOICES to prevent clipping when all play)
+    const peakGain = (velocity * 0.5) / this.MAX_VOICES;
+    const sustainGain = Math.max(peakGain * this.sustainLevel, 0.001);
 
     // Cancel any scheduled automation
-    this.gainNode.gain.cancelScheduledValues(now);
+    voice.voiceGain.gain.cancelScheduledValues(now);
 
     // ATTACK: 0 → peak
-    this.gainNode.gain.setValueAtTime(0, now);
-    this.gainNode.gain.linearRampToValueAtTime(peakGain, now + this.attackTime);
+    voice.voiceGain.gain.setValueAtTime(0, now);
+    voice.voiceGain.gain.linearRampToValueAtTime(peakGain, now + this.attackTime);
 
     // DECAY: peak → sustain
     const decayStartTime = now + this.attackTime;
     if (this.decayTime > 0.001) {
-      // Use exponential for natural decay, fallback to linear if sustain is too low
       if (sustainGain >= 0.01) {
-        this.gainNode.gain.exponentialRampToValueAtTime(
+        voice.voiceGain.gain.exponentialRampToValueAtTime(
           sustainGain,
           decayStartTime + this.decayTime
         );
       } else {
-        this.gainNode.gain.linearRampToValueAtTime(
+        voice.voiceGain.gain.linearRampToValueAtTime(
           sustainGain,
           decayStartTime + this.decayTime
         );
       }
     }
-    // If decay is 0, sustain starts immediately after attack
 
     // SUSTAIN: Hold at sustainGain (no automation needed)
-    // The gain will hold at sustainGain until stop() is called
-
-    this.isPlaying = true;
   }
 
   /**
-   * Stop playing the current note
+   * Trigger release phase for a voice
    */
-  stop(): void {
-    if (!this.oscillator) return;
-
+  private triggerRelease(voice: Voice): void {
     const now = this.audioContext.currentTime;
-    const oscillatorToStop = this.oscillator;
+    const currentGain = voice.voiceGain.gain.value;
 
-    // Cancel any pending cleanup
-    if (this.cleanupTimeoutId !== null) {
-      clearTimeout(this.cleanupTimeoutId);
-      this.cleanupTimeoutId = null;
-    }
+    // Cancel scheduled automation
+    voice.voiceGain.gain.cancelScheduledValues(now);
+    voice.voiceGain.gain.setValueAtTime(currentGain, now);
 
-    // ===== RELEASE ENVELOPE =====
-    // Capture the current gain value (might be mid-attack or mid-decay)
-    const currentGain = this.gainNode.gain.value;
-
-    // Cancel scheduled automation and start from current value
-    this.gainNode.gain.cancelScheduledValues(now);
-    this.gainNode.gain.setValueAtTime(currentGain, now);
-
-    // RELEASE: current value → 0 (use exponential for natural release)
-    this.gainNode.gain.exponentialRampToValueAtTime(
-      0.001, // Can't go to true 0 with exponential
+    // RELEASE: current value → 0
+    voice.voiceGain.gain.exponentialRampToValueAtTime(
+      0.001,
       now + this.releaseTime
     );
 
     // Stop oscillator after release
-    try {
-      oscillatorToStop.stop(now + this.releaseTime);
-    } catch (e) {
-      // Oscillator might already be stopped, ignore error
+    this.stopVoiceOscillator(voice, now + this.releaseTime);
+
+    // Mark voice as inactive after release completes
+    window.setTimeout(() => {
+      voice.active = false;
+      voice.frequency = null;
+    }, this.releaseTime * 1000 + 100);
+  }
+
+  /**
+   * Find a free voice or steal the oldest one
+   */
+  private allocateVoice(): Voice {
+    // Try to find a free voice
+    const freeVoice = this.voices.find(v => !v.active);
+    if (freeVoice) {
+      return freeVoice;
     }
 
-    // Immediately clear the oscillator reference to prevent overlaps
-    this.oscillator = null;
-    this.isPlaying = false;
+    // All voices busy - steal oldest voice (polite stealing)
+    const oldestVoice = this.voices.reduce((oldest, current) =>
+      current.noteStartTime < oldest.noteStartTime ? current : oldest
+    );
 
-    // Disconnect after the release time
-    this.cleanupTimeoutId = window.setTimeout(() => {
-      try {
-        oscillatorToStop.disconnect();
-      } catch (e) {
-        // Already disconnected, ignore error
-      }
-      this.cleanupTimeoutId = null;
-    }, this.releaseTime * 1000 + 100);
+    // Trigger release on stolen voice before re-using
+    if (oldestVoice.frequency !== null) {
+      this.activeNotes.delete(oldestVoice.frequency);
+      this.triggerRelease(oldestVoice);
+    }
+
+    return oldestVoice;
+  }
+
+  /**
+   * Start playing a note (polyphonic noteOn)
+   * @param frequency - Frequency in Hz
+   * @param velocity - Note velocity (0-1), defaults to 1
+   */
+  noteOn(frequency: number, velocity: number = 1): void {
+    // Check if note is already playing (re-trigger)
+    let voice = this.activeNotes.get(frequency);
+    if (voice) {
+      // Re-trigger: stop current oscillator, restart with new attack
+      this.stopVoiceOscillator(voice);
+      this.startVoiceOscillator(voice, frequency);
+      voice.noteStartTime = this.audioContext.currentTime;
+      this.triggerAttack(voice, velocity);
+      return;
+    }
+
+    // Allocate a voice (free or steal oldest)
+    voice = this.allocateVoice();
+
+    // Set up voice
+    voice.active = true;
+    voice.frequency = frequency;
+    voice.noteStartTime = this.audioContext.currentTime;
+
+    // Start oscillator and trigger attack
+    this.startVoiceOscillator(voice, frequency);
+    this.activeNotes.set(frequency, voice);
+    this.triggerAttack(voice, velocity);
+  }
+
+  /**
+   * Stop playing a note (polyphonic noteOff)
+   * @param frequency - Frequency in Hz
+   */
+  noteOff(frequency: number): void {
+    const voice = this.activeNotes.get(frequency);
+    if (!voice) return;
+
+    // Remove from active notes
+    this.activeNotes.delete(frequency);
+
+    // Trigger release envelope
+    this.triggerRelease(voice);
+  }
+
+  /**
+   * Legacy start method for backward compatibility
+   * @deprecated Use noteOn instead
+   */
+  start(frequency: number, velocity: number = 1): void {
+    this.noteOn(frequency, velocity);
+  }
+
+  /**
+   * Legacy stop method for backward compatibility
+   * Stops all playing notes
+   * @deprecated Use noteOff instead
+   */
+  stop(): void {
+    // Release all active notes
+    this.activeNotes.forEach((voice, frequency) => {
+      this.noteOff(frequency);
+    });
   }
 
   /**
@@ -182,7 +281,7 @@ export class SubtractiveEngine implements ISynthEngine {
    */
   updateParameter(param: string, value: number | string): void {
     const now = this.audioContext.currentTime;
-    const rampTime = 0.05; // Smooth parameter changes over 50ms
+    const rampTime = 0.05;
 
     switch (param) {
       case 'cutoff':
@@ -201,9 +300,12 @@ export class SubtractiveEngine implements ISynthEngine {
 
       case 'waveform':
         this.currentWaveform = value as OscillatorType;
-        if (this.oscillator) {
-          this.oscillator.type = this.currentWaveform;
-        }
+        // Update all active oscillators
+        this.voices.forEach(voice => {
+          if (voice.oscillator) {
+            voice.oscillator.type = this.currentWaveform;
+          }
+        });
         break;
 
       case 'filterType':
@@ -260,10 +362,17 @@ export class SubtractiveEngine implements ISynthEngine {
   }
 
   /**
-   * Check if a note is currently playing
+   * Check if any notes are currently playing
    */
   getIsPlaying(): boolean {
-    return this.isPlaying;
+    return this.activeNotes.size > 0;
+  }
+
+  /**
+   * Get count of active voices
+   */
+  getActiveVoiceCount(): number {
+    return this.voices.filter(v => v.active).length;
   }
 
   /**
@@ -279,7 +388,9 @@ export class SubtractiveEngine implements ISynthEngine {
       decay: this.decayTime,
       sustain: this.sustainLevel,
       release: this.releaseTime,
-      isPlaying: this.isPlaying,
+      isPlaying: this.getIsPlaying(),
+      activeVoices: this.getActiveVoiceCount(),
+      maxVoices: this.MAX_VOICES,
     };
   }
 }
