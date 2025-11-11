@@ -40,7 +40,11 @@ export class FMEngine implements ISynthEngine {
   private modulatorWaveform: OscillatorType = 'sine';
   private frequencyRatio: number = 1.0;
   private modulationIndex: number = 2.0;
-  private attackTime: number = 0.05;
+
+  // ADSR envelope parameters
+  private attackTime: number = 0.01;
+  private decayTime: number = 0.1;
+  private sustainLevel: number = 0.7;
   private releaseTime: number = 0.3;
 
   constructor() {
@@ -121,13 +125,38 @@ export class FMEngine implements ISynthEngine {
     this.modulatorOsc.start(now);
     this.carrierOsc.start(now);
 
-    // Apply attack envelope
+    // ===== ADSR ENVELOPE =====
+    // Calculate gain values
+    const peakGain = velocity * 0.5; // Max 0.5 to avoid clipping
+    const sustainGain = Math.max(peakGain * this.sustainLevel, 0.001); // Ensure non-zero for exponential ramps
+
+    // Cancel any scheduled automation
     this.outputGain.gain.cancelScheduledValues(now);
+
+    // ATTACK: 0 → peak
     this.outputGain.gain.setValueAtTime(0, now);
-    this.outputGain.gain.linearRampToValueAtTime(
-      velocity * 0.5, // Max gain at 50% to avoid clipping
-      now + this.attackTime
-    );
+    this.outputGain.gain.linearRampToValueAtTime(peakGain, now + this.attackTime);
+
+    // DECAY: peak → sustain
+    const decayStartTime = now + this.attackTime;
+    if (this.decayTime > 0.001) {
+      // Use exponential for natural decay, fallback to linear if sustain is too low
+      if (sustainGain >= 0.01) {
+        this.outputGain.gain.exponentialRampToValueAtTime(
+          sustainGain,
+          decayStartTime + this.decayTime
+        );
+      } else {
+        this.outputGain.gain.linearRampToValueAtTime(
+          sustainGain,
+          decayStartTime + this.decayTime
+        );
+      }
+    }
+    // If decay is 0, sustain starts immediately after attack
+
+    // SUSTAIN: Hold at sustainGain (no automation needed)
+    // The gain will hold at sustainGain until stop() is called
 
     this.isPlaying = true;
   }
@@ -148,10 +177,19 @@ export class FMEngine implements ISynthEngine {
       this.cleanupTimeoutId = null;
     }
 
-    // Apply release envelope
+    // ===== RELEASE ENVELOPE =====
+    // Capture the current gain value (might be mid-attack or mid-decay)
+    const currentGain = this.outputGain.gain.value;
+
+    // Cancel scheduled automation and start from current value
     this.outputGain.gain.cancelScheduledValues(now);
-    this.outputGain.gain.setValueAtTime(this.outputGain.gain.value, now);
-    this.outputGain.gain.linearRampToValueAtTime(0, now + this.releaseTime);
+    this.outputGain.gain.setValueAtTime(currentGain, now);
+
+    // RELEASE: current value → 0 (use exponential for natural release)
+    this.outputGain.gain.exponentialRampToValueAtTime(
+      0.001, // Can't go to true 0 with exponential
+      now + this.releaseTime
+    );
 
     // Stop oscillators after release
     try {
@@ -226,11 +264,19 @@ export class FMEngine implements ISynthEngine {
         break;
 
       case 'attack':
-        this.attackTime = value as number;
+        this.attackTime = Math.max(0, Math.min(2, value as number));
+        break;
+
+      case 'decay':
+        this.decayTime = Math.max(0, Math.min(2, value as number));
+        break;
+
+      case 'sustain':
+        this.sustainLevel = Math.max(0, Math.min(1, value as number));
         break;
 
       case 'release':
-        this.releaseTime = value as number;
+        this.releaseTime = Math.max(0, Math.min(5, value as number));
         break;
 
       default:
@@ -276,6 +322,8 @@ export class FMEngine implements ISynthEngine {
       frequencyRatio: this.frequencyRatio,
       modulationIndex: this.modulationIndex,
       attack: this.attackTime,
+      decay: this.decayTime,
+      sustain: this.sustainLevel,
       release: this.releaseTime,
       isPlaying: this.isPlaying,
     };

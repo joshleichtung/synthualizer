@@ -12,6 +12,8 @@ import { CartoonNose } from '@/components/character/CartoonNose';
 import { InteractiveControl } from '@/components/controls/InteractiveControl';
 import { EngineSelector } from '@/components/controls/EngineSelector';
 import { FMControls } from '@/components/controls/FMControls';
+import { ADSRDisplay } from '@/components/controls/ADSRDisplay';
+import { ADSRControls } from '@/components/controls/ADSRControls';
 
 export default function Home() {
   const {
@@ -26,6 +28,10 @@ export default function Home() {
     frequencyRatio,
     carrierWaveform,
     modulatorWaveform,
+    attack,
+    decay,
+    sustain,
+    release,
     initializeEngine,
     setEngineType,
     toggleNote,
@@ -37,6 +43,10 @@ export default function Home() {
     setOctave,
     setCarrierWaveform,
     setModulatorWaveform,
+    updateAttack,
+    updateDecay,
+    updateSustain,
+    updateRelease,
   } = useSynthStore();
 
   // Initialize audio engine on first user interaction (lazy initialization)
@@ -145,6 +155,33 @@ export default function Home() {
                   />
                 </>
               )}
+            </div>
+          </div>
+
+          {/* ADSR Envelope Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
+            {/* ADSR Visual Display */}
+            <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border-2 md:border-4 border-gray-800 overflow-hidden">
+              <ADSRDisplay
+                attack={attack}
+                decay={decay}
+                sustain={sustain}
+                release={release}
+              />
+            </div>
+
+            {/* ADSR Controls */}
+            <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border-2 md:border-4 border-gray-800 overflow-hidden lg:col-span-2">
+              <ADSRControls
+                attack={attack}
+                decay={decay}
+                sustain={sustain}
+                release={release}
+                onAttackChange={updateAttack}
+                onDecayChange={updateDecay}
+                onSustainChange={updateSustain}
+                onReleaseChange={updateRelease}
+              />
             </div>
           </div>
 

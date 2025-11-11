@@ -34,6 +34,12 @@ interface SynthState {
   modulatorWaveform: OscillatorType;
   carrierWaveform: OscillatorType;
 
+  // ADSR envelope parameters (shared by both engines)
+  attack: number;
+  decay: number;
+  sustain: number;
+  release: number;
+
   // Audio state
   isPlaying: boolean;
   currentNote: number | null;
@@ -59,6 +65,12 @@ interface SynthState {
   updateFrequencyRatio: (value: number) => void;
   setModulatorWaveform: (waveform: OscillatorType) => void;
   setCarrierWaveform: (waveform: OscillatorType) => void;
+
+  // ADSR actions
+  updateAttack: (value: number) => void;
+  updateDecay: (value: number) => void;
+  updateSustain: (value: number) => void;
+  updateRelease: (value: number) => void;
 
   // Common actions
   setWaveform: (waveform: OscillatorType) => void;
@@ -90,6 +102,12 @@ export const useSynthStore = create<SynthState>((set, get) => ({
   frequencyRatio: 1.0,
   modulatorWaveform: 'sine',
   carrierWaveform: 'sine',
+
+  // ADSR envelope parameters (in seconds, except sustain which is 0-1)
+  attack: 0.01,
+  decay: 0.1,
+  sustain: 0.7,
+  release: 0.3,
 
   // Audio state
   isPlaying: false,
@@ -333,5 +351,45 @@ export const useSynthStore = create<SynthState>((set, get) => ({
       engine.updateParameter('carrierWaveform', waveform);
       set({ carrierWaveform: waveform });
     }
+  },
+
+  /**
+   * Update ADSR attack time
+   * @param value - Attack time in seconds (0-2)
+   */
+  updateAttack: (value: number) => {
+    const { engine } = get();
+    engine?.updateParameter('attack', value);
+    set({ attack: value });
+  },
+
+  /**
+   * Update ADSR decay time
+   * @param value - Decay time in seconds (0-2)
+   */
+  updateDecay: (value: number) => {
+    const { engine } = get();
+    engine?.updateParameter('decay', value);
+    set({ decay: value });
+  },
+
+  /**
+   * Update ADSR sustain level
+   * @param value - Sustain level (0-1)
+   */
+  updateSustain: (value: number) => {
+    const { engine } = get();
+    engine?.updateParameter('sustain', value);
+    set({ sustain: value });
+  },
+
+  /**
+   * Update ADSR release time
+   * @param value - Release time in seconds (0-5)
+   */
+  updateRelease: (value: number) => {
+    const { engine } = get();
+    engine?.updateParameter('release', value);
+    set({ release: value });
   },
 }));
