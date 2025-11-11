@@ -36,21 +36,15 @@ export function OctaveSelector({ value, onChange }: OctaveSelectorProps) {
                     : 'bg-gray-100 text-gray-700'
                 }
               `}
-              style={{
-                filter: isActive ? 'drop-shadow(0 0 12px rgba(198, 135, 240, 0.4))' : 'drop-shadow(0 0 0px rgba(198, 135, 240, 0))',
-              }}
               whileHover={{
                 scale: 1.05,
-                filter: isActive
-                  ? 'brightness(1.05) drop-shadow(0 0 16px rgba(198, 135, 240, 0.5))'
-                  : 'brightness(1.02) drop-shadow(0 0 8px rgba(198, 135, 240, 0.25))',
+                boxShadow: isActive
+                  ? '0 0 16px rgba(198, 135, 240, 0.5)'
+                  : '0 0 8px rgba(198, 135, 240, 0.25)',
               }}
               whileTap={{
                 scale: 0.98,
-                filter: 'brightness(1.1) drop-shadow(0 0 18px rgba(198, 135, 240, 0.6))',
-              }}
-              whileFocus={{
-                filter: 'drop-shadow(0 0 6px rgba(198, 135, 240, 0.4))',
+                boxShadow: '0 0 18px rgba(198, 135, 240, 0.6)',
               }}
               transition={{
                 type: 'spring',

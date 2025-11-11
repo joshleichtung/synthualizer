@@ -44,23 +44,15 @@ export function EngineSelector({ value, onChange }: EngineSelectorProps) {
                     : 'bg-white text-gray-700 border-2 border-gray-200'
                 }
               `}
-              style={{
-                filter: isActive
-                  ? 'drop-shadow(0 0 14px rgba(255, 107, 157, 0.45))'
-                  : 'drop-shadow(0 0 0px rgba(255, 107, 157, 0))',
-              }}
               whileHover={{
                 scale: 1.02,
-                filter: isActive
-                  ? 'brightness(1.05) drop-shadow(0 0 18px rgba(255, 107, 157, 0.55))'
-                  : 'brightness(1.0) drop-shadow(0 0 10px rgba(255, 107, 157, 0.3))',
+                boxShadow: isActive
+                  ? '0 0 18px rgba(255, 107, 157, 0.55)'
+                  : '0 0 10px rgba(255, 107, 157, 0.3)',
               }}
               whileTap={{
                 scale: 0.98,
-                filter: 'brightness(1.1) drop-shadow(0 0 20px rgba(255, 107, 157, 0.65))',
-              }}
-              whileFocus={{
-                filter: 'drop-shadow(0 0 8px rgba(255, 107, 157, 0.4))',
+                boxShadow: '0 0 20px rgba(255, 107, 157, 0.65)',
               }}
               transition={{
                 type: 'spring',

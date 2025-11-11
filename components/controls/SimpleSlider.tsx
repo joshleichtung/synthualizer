@@ -122,9 +122,9 @@ export function SimpleSlider({
           className="absolute top-1/2 -translate-y-1/2 left-0 h-3 bg-gradient-to-r from-coral-pink to-purple-soft rounded-full"
           style={{
             width: `${percentage}%`,
-            filter: isActive
-              ? `brightness(1.1) drop-shadow(0 0 8px ${glowColor})`
-              : 'brightness(1.0)',
+            boxShadow: isActive
+              ? `0 0 8px ${glowColor}`
+              : 'none',
           }}
           transition={{ duration: 0.1 }}
         />
